@@ -114,7 +114,7 @@ auto state = soul->GetCurrentState();
 
 ## 📄 许可证 (License)
 
-本项目基于 [MIT](https://www.google.com/search?q=LICENSE) 许可证开源。
+本项目基于 [Apache-2.0](LICENSE) 许可证开源。
 
 ***
 
