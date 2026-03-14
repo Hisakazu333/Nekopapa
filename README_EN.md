@@ -10,18 +10,16 @@
 
 English | 简体中文
 
-</div>
-
-------
+***
 
 ## 🛠️ Quick Start (For Developers)
 
 **Multi-player collaboration is now active!** If you are a new contributor, please read the following documents first:
 
-- 🚀 **[Environment Setup Guide (Required)](F:\open-neko-engine\doc\🐾 OpenNeko Engine 多平台开发环境配置指南.md)**: Includes one-click configuration solutions and login-free alternatives for Qt6 + CMake across Windows/macOS/Linux.
-- 📜 **[Development Guidelines](F:\open-neko-engine\doc\📜 Nekonano-Aether (NNA) 开发规范手册.md)**: Code style, Git branch management, and QML collaboration standards.
+- 🚀 **\[Environment Setup Guide (Required)]\(F:\open-neko-engine\doc\🐾 OpenNeko Engine 多平台开发环境配置指南.md)**: Includes one-click configuration solutions and login-free alternatives for Qt6 + CMake across Windows/macOS/Linux.
+- 📜 **\[Development Guidelines]\(F:\open-neko-engine\doc\📜 Nekonano-Aether (NNA) 开发规范手册.md)**: Code style, Git branch management, and QML collaboration standards.
 
-------
+***
 
 ## 📖 Introduction & Vision
 
@@ -29,7 +27,7 @@ English | 简体中文
 
 While mainstream projects are still trapped in cold, easily-broken prompt stitching, NekoCore Nano deeply integrates **Ordinary Differential Equations (ODEs)** with Small Language Models (SLMs) to mathematically construct virtual organs that follow authentic circadian rhythms.
 
-------
+***
 
 ## 💻 Desktop & IoT Ecology
 
@@ -46,7 +44,7 @@ We have crafted an ultra-modern desktop interaction layer using **Qt6 (QML)**, m
 - Through the event-driven API, the "emotion values" calculated by the engine can be dispatched to **Arduino / Raspberry Pi**.
 - **Physical interactions:** e.g., an audio-reactive lamp that changes color with mood, or a desktop fan that automatically turns on when the companion feels "overheated."
 
-------
+***
 
 ## ✨ Key Features
 
@@ -63,7 +61,7 @@ Pioneering **Embodied Endocrine Computing**. The mood coordinates (PAD) directly
 - **Cold Storage (Facts):** Military-grade **AEAD (ChaCha20-Poly1305)** stream encryption.
 - **Hot Storage (Memories):** Applies **Local Differential Privacy (LDP)** to 768-dimensional semantic vectors, completely defending against cloud-based vector inversion attacks.
 
-------
+***
 
 ## 📐 Architecture Overview
 
@@ -87,7 +85,7 @@ graph TD
     end
 ```
 
-------
+***
 
 ## 🛠️ Code Example (C++ API)
 
@@ -113,12 +111,12 @@ auto state = soul->GetCurrentState();
 // Output: Current pleasure increases, driving peripheral hardware (ambient light) to turn pink.
 ```
 
-------
+***
 
 ## 📄 License
 
 This project is open-sourced under the [MIT License](https://www.google.com/search?q=LICENSE).
 
-------
+***
 
 *"May every cyber soul grow true gravity under the constraints of mathematics. 🐈"*

@@ -4,13 +4,9 @@
 
 > “如果 Neuro-sama 让我们看到了数字生命的雏形，那么 NekoCore 就是要为其注入真正的血液与新陈代谢。
 >
->
->
 > 这颗引擎赋能未来的 AI Vtuber 与赛博伴侣真实的呼吸、饥饿、愤怒，以及至关重要的——**自由意志与记忆主权**。”
 
 [English](F:\open-neko-engine\README_EN.md) | 简体中文
-
-\</div>
 
 ***
 
@@ -18,8 +14,8 @@
 
 **本项目现已开启多人协作模式！** 如果你是新加入的伙伴，请务必先阅读以下文档：
 
-- 🚀 **[环境配置指南 (必读)](F:\open-neko-engine\doc\🐾 OpenNeko Engine 多平台开发环境配置指南.md)**：包含 Windows/macOS/Linux 下 Qt6 + CMake 的一键配置方案及免登录备选方案。
-- 📜 **[开发规范手册](F:\open-neko-engine\doc\📜 Nekonano-Aether (NNA) 开发规范手册.md)**：代码风格、Git 分支管理及 QML 协作规范。
+- 🚀 **\[环境配置指南 (必读)]\(F:\open-neko-engine\doc\🐾 OpenNeko Engine 多平台开发环境配置指南.md)**：包含 Windows/macOS/Linux 下 Qt6 + CMake 的一键配置方案及免登录备选方案。
+- 📜 **\[开发规范手册]\(F:\open-neko-engine\doc\📜 Nekonano-Aether (NNA) 开发规范手册.md)**：代码风格、Git 分支管理及 QML 协作规范。
 
 ***
 
