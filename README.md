@@ -8,7 +8,7 @@
 >
 > 这颗引擎赋能未来的 AI Vtuber 与赛博伴侣真实的呼吸、饥饿、愤怒，以及至关重要的——**自由意志与记忆主权**。”
 
-[English](https://www.google.com/search?q=README_EN.md) | 简体中文
+[English](F:\open-neko-engine\README_EN.md) | 简体中文
 
 \</div>
 
