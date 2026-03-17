@@ -15,6 +15,8 @@ set(DESKTOP_SOURCES
 
 qt_add_executable(OpenNekoEngine ${DESKTOP_SOURCES})
 
+set_target_properties(OpenNekoEngine PROPERTIES WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,FALSE>)
+
 qt_add_qml_module(OpenNekoEngine
     URI OpenNeko
     VERSION 1.0
