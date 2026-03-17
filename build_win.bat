@@ -35,3 +35,6 @@ windeployqt --release --qmldir src/qml build/Release/OpenNekoEngine.exe
 echo.
 echo Build Complete! Your application is in: build/Release/OpenNekoEngine.exe
 pause
+
+set  QSG_INFO=1
+set  QSG_RHI_BACKEND=d3d11
