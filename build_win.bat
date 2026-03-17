@@ -4,10 +4,12 @@ REM Prerequisites: Qt 6, CMake, Visual Studio 2022
 
 echo [1/4] Cleaning and creating build directory...
 if exist build (
-    echo Existing build directory found. Removing to prevent cache conflicts...
+    echo Closing any running OpenNekoEngine processes...
+    taskkill /f /im OpenNekoEngine.exe >nul 2>&1
+    timeout /t 1 /nobreak >nul
     rd /s /q build
 )
-mkdir build
+if not exist build mkdir build
 
 echo [2/4] Configuring project with CMake...
 cmake -B build -G "Visual Studio 17 2022" -A x64 -DNNA_ENABLE_LIVE2D=ON
