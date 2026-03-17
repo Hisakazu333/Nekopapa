@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
-import NNA.Core 1.0
 
 Item {
     id: characterPage
@@ -28,6 +27,24 @@ Item {
             }
 
             Item { Layout.fillWidth: true }
+
+            // Refresh button
+            Rectangle {
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: 18
+                color: refreshMouse.containsMouse ? Qt.alpha(characterPage.accent, 0.15) : Qt.alpha("#000000", 0.04)
+
+                Text { anchors.centerIn: parent; text: "\uD83D\uDD04"; font.pixelSize: 14 }
+
+                MouseArea {
+                    id: refreshMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: modelManager.refresh()
+                }
+            }
 
             // Import button
             Rectangle {
@@ -89,27 +106,19 @@ Item {
                         anchors.centerIn: parent
                         spacing: 8
 
-                        // Model preview (Live2D thumbnail)
+                        // Model preview
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 100
                             height: 100
                             radius: 12
                             color: Qt.alpha(modelData.accentColor, 0.08)
-                            clip: true
-
-                            NNAAvatarCanvas {
-                                anchors.fill: parent
-                                modelPath: modelData.path
-                                visible: modelLoaded
-                            }
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "\uD83D\uDC31"
+                                text: modelData.isPreset ? "\uD83C\uDF1F" : "\uD83D\uDC31"
                                 font.pixelSize: 48
                                 opacity: 0.6
-                                visible: !modelData.path || modelData.path === ""
                             }
                         }
 
@@ -204,6 +213,96 @@ Item {
         }
     }
 
+    // Drag-and-drop overlay
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+
+        onEntered: function(drag) { dropOverlay.visible = true }
+        onExited: { dropOverlay.visible = false }
+        onDropped: function(drop) {
+            dropOverlay.visible = false
+            if (drop.hasUrls) {
+                for (var i = 0; i < drop.urls.length; i++) {
+                    doImport(drop.urls[i])
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: dropOverlay
+        anchors.fill: parent
+        color: Qt.alpha(characterPage.accent, 0.08)
+        border.color: characterPage.accent
+        border.width: 2
+        radius: 16
+        visible: false
+        z: 100
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 8
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: "\uD83D\uDCE5"; font.pixelSize: 48 }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "\u62D6\u653E Live2D \u6A21\u578B\u6587\u4EF6\u5939\u5230\u8FD9\u91CC"
+                font.pixelSize: 16; font.family: "Nunito"; color: "#4B5563"
+            }
+        }
+    }
+
+    // Toast notification
+    Rectangle {
+        id: toast
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 20
+        width: toastText.implicitWidth + 32
+        height: 40
+        radius: 20
+        color: "#2D2D2D"
+        opacity: 0
+        z: 200
+
+        Text {
+            id: toastText
+            anchors.centerIn: parent
+            font.pixelSize: 13
+            font.family: "Nunito"
+            color: "#FFFFFF"
+        }
+
+        SequentialAnimation {
+            id: toastAnim
+            NumberAnimation { target: toast; property: "opacity"; to: 1.0; duration: 200 }
+            PauseAnimation { duration: 2000 }
+            NumberAnimation { target: toast; property: "opacity"; to: 0.0; duration: 400 }
+        }
+    }
+
+    function showToast(msg) {
+        toastText.text = msg
+        toastAnim.restart()
+    }
+
+    function doImport(url) {
+        var ok = modelManager.importModel(url)
+        if (ok) {
+            showToast("\u2705 \u6A21\u578B\u5BFC\u5165\u6210\u529F")
+            // Auto-switch to the newly imported model (last in user list)
+            var list = modelManager.modelList
+            for (var i = list.length - 1; i >= 0; i--) {
+                if (!list[i].isPreset) {
+                    modelManager.switchModel(list[i].id)
+                    break
+                }
+            }
+        } else {
+            showToast("\u274C \u5BFC\u5165\u5931\u8D25\uFF0C\u8BF7\u786E\u8BA4\u6587\u4EF6\u5939\u5305\u542B .model3.json")
+        }
+    }
+
     // Context menu for delete
     Menu {
         id: contextMenu
@@ -211,7 +310,10 @@ Item {
 
         MenuItem {
             text: "\u5220\u9664\u6A21\u578B"
-            onTriggered: modelManager.removeModel(contextMenu.modelId)
+            onTriggered: {
+                modelManager.removeModel(contextMenu.modelId)
+                showToast("\u5DF2\u5220\u9664")
+            }
         }
     }
 
@@ -219,8 +321,6 @@ Item {
     FolderDialog {
         id: folderDialog
         title: "\u9009\u62E9 Live2D \u6A21\u578B\u6587\u4EF6\u5939"
-        onAccepted: {
-            modelManager.importModel(selectedFolder)
-        }
+        onAccepted: doImport(selectedFolder)
     }
 }
