@@ -10,7 +10,7 @@ if exist build (
 mkdir build
 
 echo [2/4] Configuring project with CMake...
-cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DNNA_ENABLE_LIVE2D=ON
 if %errorlevel% neq 0 (
     echo [ERROR] CMake configuration failed! Please check if CMake and VS 2022 are installed.
     pause
@@ -30,11 +30,9 @@ REM Update the path to your Qt bin directory if necessary
 if "%Qt6_DIR%"=="" (
     echo WARNING: Qt6_DIR not set. Please ensure windeployqt is in your PATH.
 )
-windeployqt --release --qmldir src/qml build/Release/OpenNekoEngine.exe
+windeployqt --release --qmldir app/stage-desktop/qml build/app/stage-desktop/Release/OpenNekoEngine.exe
 
 echo.
-echo Build Complete! Your application is in: build/Release/OpenNekoEngine.exe
+echo Build Complete!
+echo Executable: build\app\stage-desktop\Release\OpenNekoEngine.exe
 pause
-
-set  QSG_INFO=1
-set  QSG_RHI_BACKEND=d3d11
