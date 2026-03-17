@@ -42,12 +42,16 @@ public:
     }
 
     void render() override {
-        if (!m_item->m_live2dRenderer) return;
+        if (!m_item->m_live2dRenderer || m_initFailed) return;
 
         // Initialize Cubism Framework on first render (needs OpenGL context)
         if (!m_frameworkReady) {
             qDebug() << "[NNAAvatarCanvas] render: initializing framework";
-            m_item->m_live2dRenderer->initFramework();
+            if (!m_item->m_live2dRenderer->initFramework()) {
+                qWarning() << "[NNAAvatarCanvas] render: framework init FAILED, disabling Live2D";
+                m_initFailed = true;
+                return;
+            }
             m_frameworkReady = true;
         }
 
@@ -127,6 +131,7 @@ private:
     QString m_currentModelPath;
     bool m_needsReload = false;
     bool m_frameworkReady = false;
+    bool m_initFailed = false;
     int m_debugFrames = 0;
 };
 

@@ -22,11 +22,19 @@ int main(int argc, char *argv[])
     // Force OpenGL rendering backend (required for QQuickFramebufferObject / Live2D)
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
-    // Use OpenGL 2.1 compatibility profile so Cubism SDK's GLSL #version 100 shaders work
     QSurfaceFormat format;
+#ifdef Q_OS_MACOS
+    // macOS: request 2.1 legacy profile (Apple's GL compat layer)
     format.setMajorVersion(2);
     format.setMinorVersion(1);
     format.setProfile(QSurfaceFormat::NoProfile);
+#else
+    // Windows/Linux: request 3.3 compatibility profile
+    // (drivers support this well, and #version 120 shaders still work)
+    format.setMajorVersion(3);
+    format.setMinorVersion(3);
+    format.setProfile(QSurfaceFormat::CompatibilityProfile);
+#endif
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
