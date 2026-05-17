@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QNetworkAccessManager>
 #include <QTimer>
 #include <QString>
 #include <memory>
@@ -33,6 +34,12 @@ class NNAAppController : public QObject {
 
     // Live2D model
     Q_PROPERTY(QString currentModelPath READ currentModelPath NOTIFY currentModelPathChanged)
+    Q_PROPERTY(QString syncBackendBaseUrl READ syncBackendBaseUrl NOTIFY syncSettingsChanged)
+    Q_PROPERTY(QString syncAuthToken READ syncAuthToken NOTIFY syncSettingsChanged)
+    Q_PROPERTY(bool syncBusy READ syncBusy NOTIFY syncStateChanged)
+    Q_PROPERTY(QString syncStatusText READ syncStatusText NOTIFY syncStateChanged)
+    Q_PROPERTY(QString syncLastError READ syncLastError NOTIFY syncStateChanged)
+    Q_PROPERTY(bool desktopCompanionEnabled READ desktopCompanionEnabled WRITE setDesktopCompanionEnabled NOTIFY desktopCompanionEnabledChanged)
 
 public:
     explicit NNAAppController(QObject* parent = nullptr);
@@ -53,18 +60,50 @@ public:
     float affinityDelta() const;
     int memoryCount() const;
     QString currentModelPath() const;
+    QString syncBackendBaseUrl() const;
+    QString syncAuthToken() const;
+    bool syncBusy() const;
+    QString syncStatusText() const;
+    QString syncLastError() const;
+    bool desktopCompanionEnabled() const;
+    void setDesktopCompanionEnabled(bool enabled);
 
     Q_INVOKABLE void feedPet(const QString& foodType);
     Q_INVOKABLE void giveWater();
     Q_INVOKABLE void touchPet(float x, float y, float duration);
     Q_INVOKABLE void sendMessage(const QString& text);
+    Q_INVOKABLE void saveSyncSettings(const QString& baseUrl, const QString& token);
+    Q_INVOKABLE void pushCurrentCompanionToMobile();
+
+    // Mock data sources for UI development (will be replaced by real engine APIs)
+    Q_INVOKABLE QVariantList recentMemories(int limit);
+    Q_INVOKABLE QVariantList dreamLogs(int limit);
+    Q_INVOKABLE QVariantList perceptionEvents(int limit);
+    Q_INVOKABLE QVariantList iotDevices();
+    Q_INVOKABLE QVariantList availableTools();
+    Q_INVOKABLE QStringList memoryTags();
 
 signals:
     void stateChanged();
     void currentModelPathChanged();
+    void syncSettingsChanged();
+    void syncStateChanged();
+    void desktopCompanionEnabledChanged();
 
 private:
+    void loadSyncSettings();
+    QString normalizeBaseUrl(const QString& value) const;
+    QString normalizeAuthorizationValue(const QString& value) const;
+
     nna::core::NNAEngine m_engine;
     QTimer m_tickTimer;
     NNAModelManager* m_modelManager = nullptr;
+    QNetworkAccessManager m_networkManager;
+    QString m_syncBackendBaseUrl;
+    QString m_syncAuthToken;
+    QString m_syncDeviceId;
+    bool m_syncBusy = false;
+    QString m_syncStatusText;
+    QString m_syncLastError;
+    bool m_desktopCompanionEnabled = false;
 };

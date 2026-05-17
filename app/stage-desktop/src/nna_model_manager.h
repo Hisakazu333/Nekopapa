@@ -24,6 +24,8 @@ public:
     QVariantList modelList() const;
     QString currentModelPath() const;
     QString currentModelId() const;
+    QString currentModelName() const;
+    QString currentModelThumbnailUrl() const;
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE bool importModel(const QUrl& folderUrl);

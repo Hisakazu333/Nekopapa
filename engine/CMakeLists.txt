@@ -7,6 +7,7 @@ if(NNA_ENABLE_LIVE2D)
         src/graphics/live2d/live2d_pal.cpp
         src/graphics/live2d/live2d_texture.cpp
         src/graphics/live2d/live2d_model.cpp
+        src/graphics/live2d/live2d_stage_driver.cpp
         src/graphics/live2d/live2d_renderer.cpp
     )
 endif()

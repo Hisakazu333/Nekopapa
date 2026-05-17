@@ -61,6 +61,24 @@ QString NNAModelManager::currentModelId() const {
     return m_currentModelId;
 }
 
+QString NNAModelManager::currentModelName() const {
+    for (const auto& m : m_models) {
+        if (m.id == m_currentModelId) {
+            return m.name;
+        }
+    }
+    return {};
+}
+
+QString NNAModelManager::currentModelThumbnailUrl() const {
+    for (const auto& m : m_models) {
+        if (m.id == m_currentModelId) {
+            return m.thumbnailUrl;
+        }
+    }
+    return {};
+}
+
 void NNAModelManager::refresh() {
     scanModels();
 }

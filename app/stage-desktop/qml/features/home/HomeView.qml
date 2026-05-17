@@ -1,0 +1,725 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+Item {
+    id: root
+
+    property var shellRef: null
+    property real dockClearance: 122
+
+    HomeStore { id: homeStore }
+    readonly property var s: homeStore.state
+    readonly property real designWidth: 735
+    readonly property real designHeight: 944
+    readonly property real compactProgress: smoothStep((960 - width) / 160)
+    readonly property real compactScale: Math.max(0.1, Math.min(1.0, width / designWidth, height / designHeight))
+    readonly property real wideStageMaxWidth: 1240
+    readonly property real wideLayoutWidth: Math.min(width, wideStageMaxWidth)
+    readonly property real layoutWidth: mix(wideLayoutWidth, designWidth, compactProgress)
+    readonly property real layoutHeight: mix(height, designHeight, compactProgress)
+    readonly property real layoutScale: mix(1.0, compactScale, compactProgress)
+    readonly property real avatarSafeHeight: Math.max(1, height - root.dockClearance - 150)
+    readonly property real wideAvatarTargetHeight: Math.max(760, Math.min(avatarSafeHeight, 920))
+    readonly property real compactAvatarTargetHeight: Math.max(600, Math.min(avatarSafeHeight, 760))
+    readonly property real avatarTargetHeight: mix(wideAvatarTargetHeight, compactAvatarTargetHeight, compactProgress)
+    readonly property real avatarBucket: 8
+    readonly property real avatarRenderHeight: Math.max(1, Math.round(avatarTargetHeight / avatarBucket) * avatarBucket)
+    readonly property real wideRailWidth: Math.min(Math.max(layoutWidth * 0.21, 230), 272)
+    readonly property real railWidth: mix(wideRailWidth, 196, compactProgress)
+    readonly property real rightRailWidth: mix(wideRailWidth, 180, compactProgress)
+    readonly property real composerWidth: mix(Math.min(Math.max(layoutWidth * 0.62, 720), 940), 625, compactProgress)
+    readonly property real wideAvatarStageWidth: Math.min(Math.max(avatarRenderHeight * 0.72, 620), 820)
+    readonly property real compactAvatarStageWidth: Math.min(width / compactScale, designWidth)
+    readonly property real avatarStageWidth: mix(wideAvatarStageWidth, compactAvatarStageWidth, compactProgress)
+    readonly property real avatarRenderWidth: Math.max(1, Math.round(avatarStageWidth / avatarBucket) * avatarBucket)
+    readonly property real modelRenderScale: Math.max(0.84,
+        Math.min(1.08, mix(1.00, 0.94, compactProgress) * s.modelScaleFactor))
+    readonly property real modelRenderOffsetX: s.modelOffsetXAdjust
+    readonly property real modelRenderOffsetY: mix(0.04, 0.03, compactProgress) + s.modelOffsetYAdjust
+    readonly property real avatarCenterOffsetY: mix(-46, -34, compactProgress)
+    readonly property string clockIconPath: "M12 6v6l4 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+    property date currentTime: new Date()
+
+    Timer {
+        interval: 30000
+        repeat: true
+        running: true
+        onTriggered: root.currentTime = new Date()
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: Theme.color("bg.canvas")
+    }
+
+    HomeAvatarArea {
+        id: avatarArea
+        width: root.avatarRenderWidth
+        height: root.avatarRenderHeight
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2 + root.avatarCenterOffsetY)
+        modelScale: root.modelRenderScale
+        modelOffsetX: root.modelRenderOffsetX
+        modelOffsetY: root.modelRenderOffsetY
+        projectionWidthHint: 0.0
+        projectionHeightHint: 0.0
+    }
+
+    Item {
+        id: layoutStage
+        width: root.layoutWidth
+        height: root.layoutHeight
+        scale: root.layoutScale
+        anchors.centerIn: parent
+        transformOrigin: Item.Center
+
+        Rectangle {
+            id: statusToolbar
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: root.mix(18, 30, root.compactProgress)
+            anchors.topMargin: 14
+            width: Math.min(statusRow.implicitWidth + 36, parent.width - root.mix(96, 118, root.compactProgress))
+            height: 46
+            radius: 23
+            color: Theme.alpha("surface.float", Theme.isDark ? 0.68 : 0.64)
+            border.color: Theme.alpha("line.soft", Theme.isDark ? 0.58 : 0.52)
+            border.width: 1
+            clip: true
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.topMargin: 3
+                radius: parent.radius
+                color: Theme.alpha("overlay.scrim", Theme.isDark ? 0.20 : 0.035)
+                z: -1
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+                anchors.topMargin: 1
+                height: 1
+                radius: 1
+                color: Theme.alpha("surface.float", Theme.isDark ? 0.22 : 0.72)
+            }
+
+            Row {
+                id: statusRow
+                anchors.centerIn: parent
+                height: 28
+                spacing: 26
+
+                StagePill {
+                    labelText: appController.currentModelPath !== "" ? "Live2D 已加载" : "等待模型"
+                    accentColor: appController.currentModelPath !== "" ? Theme.color("state.success") : Theme.color("state.warning")
+                }
+
+                StagePill {
+                    labelText: moodLabel(appController.currentMood)
+                    accentColor: Theme.color("accent.base")
+                }
+
+                StagePill {
+                    labelText: appController.characterName + "在线"
+                    accentColor: Theme.color("state.success")
+                }
+
+                StagePill {
+                    labelText: Qt.formatTime(root.currentTime, "hh:mm")
+                    accentColor: Theme.color("text.tertiary")
+                    iconPath: root.clockIconPath
+                    muted: true
+                }
+            }
+        }
+
+        Rectangle {
+            id: settingsButton
+            width: 42
+            height: 42
+            radius: 21
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 14
+            anchors.rightMargin: root.mix(18, 30, root.compactProgress)
+            color: s.modelAdjustOpen
+                ? Theme.alpha("accent.soft", Theme.isDark ? 0.82 : 1.0)
+                : settingsMouse.containsMouse
+                    ? Theme.alpha("surface.float", Theme.isDark ? 0.56 : 0.98)
+                    : Theme.alpha("surface.float", Theme.isDark ? 0.44 : 0.92)
+            border.color: s.modelAdjustOpen ? Theme.alpha("accent.base", 0.34) : Theme.alpha("line.soft", 0.76)
+            border.width: 1
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.topMargin: 3
+                radius: parent.radius
+                color: Theme.alpha("overlay.scrim", Theme.isDark ? 0.24 : 0.055)
+                z: -1
+            }
+
+            ShapeIcon {
+                anchors.centerIn: parent
+                pathData: Icons.settings
+                size: 18
+                iconColor: s.modelAdjustOpen ? Theme.color("accent.base") : Theme.color("text.secondary")
+            }
+
+            MouseArea {
+                id: settingsMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: s.modelAdjustOpen = !s.modelAdjustOpen
+            }
+        }
+
+        Column {
+            id: leftRail
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: root.mix(28, 30, root.compactProgress)
+            anchors.topMargin: root.mix(112, 132, root.compactProgress)
+            width: root.railWidth
+            spacing: 14
+
+            GlassCard {
+                width: parent.width
+                titleText: s.dateText
+                accentText: "\u5929\u6C14\u6674\u6717"
+
+                Text {
+                    width: parent.width - 40
+                    text: s.greetingText + " " + appController.characterName
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 19
+                    font.family: Theme.fontUi
+                    font.weight: Font.Black
+                    color: Theme.color("text.primary")
+                }
+
+                Text {
+                    width: parent.width - 40
+                    text: latestCompanionText()
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 12
+                    font.family: Theme.fontUi
+                    lineHeight: 1.4
+                    color: Theme.color("text.secondary")
+                }
+            }
+
+            GlassCard {
+                width: parent.width
+                titleText: "\u8EAB\u4F53\u72B6\u6001"
+
+                MetricRow {
+                    labelText: "\u9971\u98DF"
+                    valueText: formatPercent(appController.satiety)
+                    progress: appController.satiety / 100
+                    accentColor: Theme.color("state.success")
+                }
+
+                MetricRow {
+                    labelText: "\u6C34\u5206"
+                    valueText: formatPercent(appController.hydration)
+                    progress: appController.hydration / 100
+                    accentColor: Theme.color("state.danger")
+                }
+
+                MetricRow {
+                    labelText: "\u6D3B\u529B"
+                    valueText: formatPercent(appController.energy)
+                    progress: appController.energy / 100
+                    accentColor: Theme.color("state.warning")
+                }
+            }
+
+            GlassCard {
+                width: parent.width
+                titleText: "\u5173\u7CFB\u8282\u594F"
+
+                PairMetric {
+                    labelText: "\u8BB0\u5FC6\u6570"
+                    valueText: String(appController.memoryCount)
+                }
+
+                PairMetric {
+                    labelText: "\u4ECA\u65E5\u4E92\u52A8"
+                    valueText: String(appController.interactionCount)
+                }
+            }
+        }
+
+        Column {
+            id: rightRail
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: root.mix(28, 30, root.compactProgress)
+            anchors.topMargin: 132
+            width: root.rightRailWidth
+            spacing: 14
+
+            GlassCard {
+                width: parent.width
+                titleText: "LIVE STAGE"
+                accentText: appController.currentModelPath !== "" ? "\u8FD0\u884C\u4E2D" : "\u7B49\u5F85\u6A21\u578B"
+
+                Text {
+                    width: parent.width - 40
+                    text: appController.characterName + " \u5728\u684C\u9762\u966A\u4F34\u4E2D"
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 15
+                    font.family: Theme.fontUi
+                    font.weight: Font.Black
+                    color: Theme.color("text.primary")
+                }
+
+                StageSummary {
+                    labelText: "\u6A21\u578B"
+                    valueText: appController.currentModelPath !== "" ? "Live2D" : "\u672A\u52A0\u8F7D"
+                    accentColor: appController.currentModelPath !== "" ? Theme.color("state.success") : Theme.color("state.warning")
+                }
+
+                StageSummary {
+                    labelText: "\u5FC3\u60C5"
+                    valueText: moodLabel(appController.currentMood)
+                    accentColor: Theme.color("accent.base")
+                }
+
+                StageSummary {
+                    labelText: "\u4E92\u52A8"
+                    valueText: String(appController.interactionCount)
+                    accentColor: Theme.color("state.warning")
+                }
+            }
+
+            GlassCard {
+                width: parent.width
+                titleText: "\u5FEB\u6377\u52A8\u4F5C"
+
+                ActionRow {
+                    iconPath: Icons.chat
+                    titleText: "\u53BB\u5BF9\u8BDD"
+                    subtitleText: "\u5207\u5230\u7EAF\u804A\u5929\u89C6\u56FE"
+                    accentColor: Theme.color("accent.base")
+                    onTriggered: root.switchToPage(1)
+                }
+
+                ActionRow {
+                    iconPath: Icons.memory
+                    titleText: "\u67E5\u8BB0\u5FC6"
+                    subtitleText: "\u770B\u5173\u7CFB\u548C\u4E8B\u4EF6\u8F68\u8FF9"
+                    accentColor: Theme.color("state.warning")
+                    onTriggered: root.switchToPage(2)
+                }
+
+                ActionRow {
+                    iconPath: Icons.settings
+                    titleText: "\u540C\u6B65\u8BBE\u7F6E"
+                    subtitleText: "\u8FDE\u63A5\u624B\u673A\u548C\u540E\u7AEF"
+                    accentColor: Theme.color("state.success")
+                    onTriggered: root.switchToPage(5)
+                }
+            }
+        }
+
+        HomeInputBar {
+            id: composerShell
+            width: root.composerWidth
+            height: 56
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: root.mix(root.dockClearance + 20, 96, root.compactProgress)
+            store: homeStore
+        }
+
+        Item {
+            id: drawerDock
+            width: 292
+            height: 340
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 74
+            anchors.rightMargin: root.mix(18, 30, root.compactProgress)
+
+            HomeModelAdjustDrawer {
+                store: homeStore
+            }
+        }
+    }
+
+    component StagePill: Item {
+        id: stagePill
+        property string labelText: ""
+        property color accentColor: Theme.color("accent.base")
+        property bool muted: false
+        property string iconPath: ""
+
+        implicitWidth: pillRow.implicitWidth
+        implicitHeight: 28
+        width: implicitWidth
+        height: implicitHeight
+
+        Row {
+            id: pillRow
+            anchors.centerIn: parent
+            spacing: 9
+
+            ShapeIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: stagePill.iconPath !== ""
+                pathData: stagePill.iconPath
+                size: 13
+                strokeWidth: 2.0
+                iconColor: Theme.color("text.tertiary")
+            }
+
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: stagePill.iconPath === ""
+                width: 8
+                height: 8
+                radius: 4
+                color: stagePill.accentColor
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: stagePill.labelText
+                font.pixelSize: 14
+                font.family: Theme.fontUi
+                font.weight: Font.DemiBold
+                renderType: Text.NativeRendering
+                color: stagePill.muted ? Theme.color("text.tertiary") : Theme.color("text.secondary")
+            }
+        }
+    }
+
+    component GlassCard: Rectangle {
+        id: glassCard
+        property string titleText: ""
+        property string accentText: ""
+        default property alias content: contentColumn.data
+
+        implicitHeight: contentColumn.implicitHeight + root.mix(44, 40, root.compactProgress)
+        radius: 24
+        color: Theme.alpha("surface.base", Theme.isDark ? 0.88 : 0.94)
+        border.color: Theme.alpha("line.soft", Theme.isDark ? 0.74 : 0.64)
+        border.width: 1
+        clip: false
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.topMargin: 5
+            radius: parent.radius
+            color: Theme.alpha("overlay.scrim", Theme.isDark ? 0.24 : 0.048)
+            z: -1
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 1
+            radius: parent.radius - 1
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0.0; color: Theme.alpha("surface.float", Theme.isDark ? 0.16 : 0.48) }
+                GradientStop { position: 1.0; color: "transparent" }
+            }
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.leftMargin: 18
+            anchors.rightMargin: 18
+            anchors.topMargin: 1
+            height: 1
+            color: Theme.alpha("surface.float", Theme.isDark ? 0.22 : 0.86)
+        }
+
+        Column {
+            id: contentColumn
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 10
+
+            Row {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: glassCard.titleText
+                    font.pixelSize: 12
+                    font.family: Theme.fontUi
+                    font.weight: Font.DemiBold
+                    color: Theme.color("text.secondary")
+                }
+
+                Text {
+                    text: glassCard.accentText
+                    font.pixelSize: 12
+                    font.family: Theme.fontUi
+                    font.weight: Font.DemiBold
+                    color: Theme.color("accent.base")
+                    visible: text !== ""
+                }
+            }
+        }
+    }
+
+    component MetricRow: Item {
+        id: metricRow
+        property string labelText: ""
+        property string valueText: ""
+        property real progress: 0
+        property color accentColor: Theme.color("accent.base")
+
+        width: parent ? parent.width : 200
+        implicitHeight: 40
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 6
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    Layout.fillWidth: true
+                    text: metricRow.labelText
+                    font.pixelSize: 12
+                    font.family: Theme.fontUi
+                    color: Theme.color("text.secondary")
+                }
+
+                Text {
+                    text: metricRow.valueText
+                    font.pixelSize: 12
+                    font.family: Theme.fontMono
+                    font.weight: Font.Bold
+                    color: Theme.color("text.primary")
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 8
+                radius: 4
+                color: Theme.alpha("line.soft", Theme.isDark ? 0.46 : 0.78)
+
+                Rectangle {
+                    width: parent.width * Math.max(0, Math.min(1, metricRow.progress))
+                    height: parent.height
+                    radius: 4
+                    color: metricRow.accentColor
+                }
+            }
+        }
+    }
+
+    component PairMetric: RowLayout {
+        property string labelText: ""
+        property string valueText: ""
+
+        width: parent ? parent.width : 200
+
+        Text {
+            text: parent.labelText
+            font.pixelSize: 12
+            font.family: Theme.fontUi
+            color: Theme.color("text.secondary")
+        }
+
+        Item { Layout.fillWidth: true }
+
+        Text {
+            text: parent.valueText
+            font.pixelSize: 12
+            font.family: Theme.fontMono
+            font.weight: Font.Bold
+            color: Theme.color("text.primary")
+        }
+    }
+
+    component ActionRow: Rectangle {
+        id: actionRow
+        property string iconPath: Icons.chat
+        property string titleText: ""
+        property string subtitleText: ""
+        property color accentColor: Theme.color("accent.base")
+        signal triggered()
+
+        width: parent ? parent.width : 200
+        height: 58
+        radius: 20
+        color: actionMouse.containsMouse
+            ? Theme.alpha("surface.float", Theme.isDark ? 0.66 : 0.86)
+            : Theme.alpha("surface.raised", Theme.isDark ? 0.48 : 0.66)
+        border.color: actionMouse.containsMouse ? Qt.rgba(accentColor.r, accentColor.g, accentColor.b, Theme.isDark ? 0.42 : 0.28) : Theme.alpha("line.soft", 0.46)
+        border.width: 1
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            spacing: 12
+
+            Rectangle {
+                Layout.preferredWidth: 38
+                Layout.preferredHeight: 38
+                radius: 19
+                color: Qt.rgba(actionRow.accentColor.r, actionRow.accentColor.g, actionRow.accentColor.b, Theme.isDark ? 0.26 : 0.14)
+
+                ShapeIcon {
+                    anchors.centerIn: parent
+                    pathData: actionRow.iconPath
+                    size: 16
+                    iconColor: actionRow.accentColor
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+
+                Text {
+                    Layout.fillWidth: true
+                    text: actionRow.titleText
+                    font.pixelSize: 13
+                    font.family: Theme.fontUi
+                    font.weight: Font.DemiBold
+                    color: Theme.color("text.primary")
+                    elide: Text.ElideRight
+                    maximumLineCount: 1
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: actionRow.subtitleText
+                    font.pixelSize: 10
+                    font.family: Theme.fontUi
+                    color: Theme.color("text.tertiary")
+                    elide: Text.ElideRight
+                    maximumLineCount: 1
+                }
+            }
+            Rectangle {
+                Layout.preferredWidth: 18
+                Layout.preferredHeight: 18
+                radius: 9
+                color: "transparent"
+
+                ShapeIcon {
+                    anchors.centerIn: parent
+                    pathData: Icons.chevronRight
+                    size: 11
+                    iconColor: actionMouse.containsMouse ? actionRow.accentColor : Theme.color("text.tertiary")
+                }
+            }
+        }
+
+        MouseArea {
+            id: actionMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: actionRow.triggered()
+        }
+    }
+
+    component StageSummary: Rectangle {
+        id: stageSummary
+        property string labelText: ""
+        property string valueText: ""
+        property color accentColor: Theme.color("accent.base")
+
+        width: parent ? parent.width : 200
+        height: 34
+        radius: 14
+        color: Theme.alpha("surface.raised", Theme.isDark ? 0.42 : 0.58)
+        border.color: Theme.alpha("line.soft", 0.42)
+        border.width: 1
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            spacing: 8
+
+            Rectangle {
+                Layout.preferredWidth: 7
+                Layout.preferredHeight: 7
+                radius: 3.5
+                color: stageSummary.accentColor
+            }
+
+            Text {
+                text: stageSummary.labelText
+                font.pixelSize: 11
+                font.family: Theme.fontUi
+                font.weight: Font.DemiBold
+                color: Theme.color("text.tertiary")
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text {
+                text: stageSummary.valueText
+                font.pixelSize: 12
+                font.family: Theme.fontUi
+                font.weight: Font.Bold
+                color: Theme.color("text.primary")
+            }
+        }
+    }
+
+    function switchToPage(index) {
+        if (shellRef)
+            shellRef.currentPage = index
+    }
+
+    function latestCompanionText() {
+        if (s.messages.length > 0)
+            return s.messages[s.messages.length - 1].text
+        return s.catSpeech
+    }
+
+    function moodLabel(mood) {
+        if (mood === "happy")
+            return "\u5F00\u5FC3"
+        if (mood === "calm")
+            return "\u5E73\u9759"
+        if (mood === "excited")
+            return "\u5174\u594B"
+        return "\u966A\u4F34\u4E2D"
+    }
+
+    function formatPercent(value) {
+        return Math.round(Math.max(0, Math.min(100, value))) + "%"
+    }
+
+    function clamp01(value) {
+        return Math.max(0, Math.min(1, value))
+    }
+
+    function smoothStep(value) {
+        var t = clamp01(value)
+        return t * t * (3 - 2 * t)
+    }
+
+    function mix(from, to, progress) {
+        return from + (to - from) * clamp01(progress)
+    }
+
+    function profileNumber(key, fallbackValue) {
+        var value = live2dProfile ? live2dProfile[key] : undefined
+        return typeof value === "number" && isFinite(value) ? value : fallbackValue
+    }
+}

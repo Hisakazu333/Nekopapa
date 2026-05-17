@@ -18,6 +18,9 @@
 #include "app_controller.h"
 #include "nna_model_manager.h"
 #include "nna_avatar_canvas.h"
+#include "live2d_stage_profile.h"
+#include "theme.h"
+#include "icons.h"
 
 using namespace Qt::StringLiterals;
 
@@ -63,6 +66,15 @@ int main(int argc, char *argv[])
     controller.setModelManager(&modelManager);
 
     QQmlApplicationEngine engine;
+
+    // Register C++ singletons for global Theme and Icons access
+    qmlRegisterSingletonType<Theme>("OpenNeko", 1, 0, "Theme",
+        [](QQmlEngine*, QJSEngine*) -> QObject* { return new Theme(); });
+    qmlRegisterSingletonType<Icons>("OpenNeko", 1, 0, "Icons",
+        [](QQmlEngine*, QJSEngine*) -> QObject* { return new Icons(); });
+    qmlRegisterSingletonType<Live2DStageProfile>("OpenNeko", 1, 0, "Live2DStageProfile",
+        [](QQmlEngine*, QJSEngine*) -> QObject* { return new Live2DStageProfile(); });
+
     engine.rootContext()->setContextProperty("appController", &controller);
     engine.rootContext()->setContextProperty("modelManager", &modelManager);
 

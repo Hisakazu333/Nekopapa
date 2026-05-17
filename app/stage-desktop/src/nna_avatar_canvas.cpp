@@ -6,6 +6,8 @@
  */
 
 #include "nna_avatar_canvas.h"
+#include <QDateTime>
+#include <QHoverEvent>
 #include <QMouseEvent>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLContext>
@@ -16,6 +18,34 @@
 #ifdef NNA_ENABLE_LIVE2D
 #include "nna/graphics/live2d/live2d_pal.h"
 #endif
+
+namespace {
+
+float clampUnitSigned(float value) {
+    if (value < -1.0f) {
+        return -1.0f;
+    }
+    if (value > 1.0f) {
+        return 1.0f;
+    }
+    return value;
+}
+
+float normalizePointerX(float x, float width) {
+    if (width <= 0.0f) {
+        return 0.0f;
+    }
+    return clampUnitSigned((x / width) * 2.0f - 1.0f);
+}
+
+float normalizePointerY(float y, float height) {
+    if (height <= 0.0f) {
+        return 0.0f;
+    }
+    return clampUnitSigned(-((y / height) * 2.0f - 1.0f));
+}
+
+} // namespace
 
 // Minimal no-op renderer used when Live2D is disabled — prevents null-deref in Qt
 class NNAFallbackRenderer : public QQuickFramebufferObject::Renderer {
@@ -38,7 +68,6 @@ public:
         : m_item(item) {}
 
     QOpenGLFramebufferObject* createFramebufferObject(const QSize& size) override {
-        qDebug() << "[NNAAvatarCanvas] createFBO size:" << size;
         QOpenGLFramebufferObject::Attachment attachment =
             QOpenGLFramebufferObject::CombinedDepthStencil;
         return new QOpenGLFramebufferObject(size, attachment);
@@ -51,11 +80,12 @@ public:
         m_scale = canvas->m_modelScale;
         m_offsetX = canvas->m_modelOffsetX;
         m_offsetY = canvas->m_modelOffsetY;
+        m_projectionWidthHint = canvas->m_projectionWidthHint;
+        m_projectionHeightHint = canvas->m_projectionHeightHint;
 
         if (canvas->m_modelPath != m_currentModelPath) {
             m_currentModelPath = canvas->m_modelPath;
             m_needsReload = true;
-            qDebug() << "[NNAAvatarCanvas] sync: modelPath changed to" << m_currentModelPath;
         }
     }
 
@@ -64,7 +94,6 @@ public:
 
         // Initialize Cubism Framework on first render (needs OpenGL context)
         if (!m_frameworkReady) {
-            qDebug() << "[NNAAvatarCanvas] render: initializing framework";
             if (!m_item->m_live2dRenderer->initFramework()) {
                 qWarning() << "[NNAAvatarCanvas] render: framework init FAILED, disabling Live2D";
                 m_initFailed = true;
@@ -80,7 +109,6 @@ public:
         }
 
         if (m_needsReload && !m_currentModelPath.isEmpty()) {
-            qDebug() << "[NNAAvatarCanvas] render: loading model from" << m_currentModelPath;
             m_needsReload = false;
             loadModel();
         }
@@ -92,19 +120,20 @@ public:
         int fboW = fbo ? fbo->width() : m_width;
         int fboH = fbo ? fbo->height() : m_height;
 
-        if (m_debugFrames < 3) {
-            qDebug() << "[NNAAvatarCanvas] render: item=" << m_width << "x" << m_height
-                     << "fbo=" << fboW << "x" << fboH
-                     << "scale=" << m_scale << "offX=" << m_offsetX << "offY=" << m_offsetY;
-            m_debugFrames++;
-        }
-
         glViewport(0, 0, fboW, fboH);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if (m_item->m_live2dRenderer->isModelLoaded()) {
-            m_item->m_live2dRenderer->draw(fboW, fboH, m_scale, m_offsetX, m_offsetY);
+            m_item->m_live2dRenderer->draw(
+                fboW,
+                fboH,
+                m_scale,
+                m_offsetX,
+                m_offsetY,
+                m_projectionWidthHint,
+                m_projectionHeightHint
+            );
         }
 
         update();
@@ -146,11 +175,12 @@ private:
     float m_scale = 1.0f;
     float m_offsetX = 0.0f;
     float m_offsetY = 0.0f;
+    float m_projectionWidthHint = 0.0f;
+    float m_projectionHeightHint = 0.0f;
     QString m_currentModelPath;
     bool m_needsReload = false;
     bool m_frameworkReady = false;
     bool m_initFailed = false;
-    int m_debugFrames = 0;
 };
 
 #endif // NNA_ENABLE_LIVE2D
@@ -160,31 +190,26 @@ private:
 NNAAvatarCanvas::NNAAvatarCanvas(QQuickItem* parent)
     : QQuickFramebufferObject(parent)
 {
-    qDebug() << "[NNAAvatarCanvas] constructor";
     setAcceptedMouseButtons(Qt::LeftButton);
+    setAcceptHoverEvents(true);
     setMirrorVertically(true);
 
 #ifdef NNA_ENABLE_LIVE2D
     m_live2dRenderer = new nna::graphics::Live2DRenderer();
-    qDebug() << "[NNAAvatarCanvas] Live2DRenderer created";
 #endif
 }
 
 NNAAvatarCanvas::~NNAAvatarCanvas() {
-    qDebug() << "[NNAAvatarCanvas] destructor called";
 #ifdef NNA_ENABLE_LIVE2D
     delete m_live2dRenderer;
 #endif
 }
 
 QQuickFramebufferObject::Renderer* NNAAvatarCanvas::createRenderer() const {
-    qDebug() << "[NNAAvatarCanvas] createRenderer() called";
 #ifdef NNA_ENABLE_LIVE2D
     auto* r = new NNAAvatarCanvasRenderer(const_cast<NNAAvatarCanvas*>(this));
-    qDebug() << "[NNAAvatarCanvas] createRenderer() returning Live2D renderer";
     return r;
 #else
-    qDebug() << "[NNAAvatarCanvas] createRenderer() returning fallback (Live2D disabled)";
     return new NNAFallbackRenderer();
 #endif
 }
@@ -209,11 +234,133 @@ void NNAAvatarCanvas::startMotion(const QString& group, int no, int priority) {
 #endif
 }
 
+void NNAAvatarCanvas::setMouthOpen(float value) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->setMouthOpen(value);
+        update();
+    }
+#else
+    Q_UNUSED(value);
+#endif
+}
+
+void NNAAvatarCanvas::setExpression(const QString& expressionId) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->setExpression(expressionId.toUtf8().constData());
+        update();
+    }
+#else
+    Q_UNUSED(expressionId);
+#endif
+}
+
+void NNAAvatarCanvas::setParameterValue(const QString& parameterId, float value, float weight) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->setParameterValue(parameterId.toUtf8().constData(), value, weight);
+        update();
+    }
+#else
+    Q_UNUSED(parameterId);
+    Q_UNUSED(value);
+    Q_UNUSED(weight);
+#endif
+}
+
+void NNAAvatarCanvas::addParameterValue(const QString& parameterId, float value, float weight) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->addParameterValue(parameterId.toUtf8().constData(), value, weight);
+        update();
+    }
+#else
+    Q_UNUSED(parameterId);
+    Q_UNUSED(value);
+    Q_UNUSED(weight);
+#endif
+}
+
+void NNAAvatarCanvas::clearParameterValue(const QString& parameterId) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->clearParameterValue(parameterId.toUtf8().constData());
+        update();
+    }
+#else
+    Q_UNUSED(parameterId);
+#endif
+}
+
+QString NNAAvatarCanvas::modelCapabilityJson() const {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        return QString::fromStdString(m_live2dRenderer->capabilityJson());
+    }
+#endif
+    return QStringLiteral("{\"loaded\":false}");
+}
+
+void NNAAvatarCanvas::triggerLookAt(float x, float y, float strength, int durationMs) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->triggerLookAt(x, y, strength, durationMs);
+        update();
+    }
+#else
+    Q_UNUSED(x);
+    Q_UNUSED(y);
+    Q_UNUSED(strength);
+    Q_UNUSED(durationMs);
+#endif
+}
+
+void NNAAvatarCanvas::startLookTracking(float x, float y, float strength) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->startLookTracking(x, y, strength);
+        update();
+    }
+#else
+    Q_UNUSED(x);
+    Q_UNUSED(y);
+    Q_UNUSED(strength);
+#endif
+}
+
+void NNAAvatarCanvas::updateLookTracking(float x, float y, float strength) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->updateLookTracking(x, y, strength);
+        update();
+    }
+#else
+    Q_UNUSED(x);
+    Q_UNUSED(y);
+    Q_UNUSED(strength);
+#endif
+}
+
+void NNAAvatarCanvas::releaseLookTracking(int durationMs) {
+#ifdef NNA_ENABLE_LIVE2D
+    if (m_live2dRenderer) {
+        m_live2dRenderer->releaseLookTracking(durationMs);
+        update();
+    }
+#else
+    Q_UNUSED(durationMs);
+#endif
+}
+
 void NNAAvatarCanvas::onTouchAt(float x, float y) {
 #ifdef NNA_ENABLE_LIVE2D
     if (m_live2dRenderer) {
         m_live2dRenderer->onTouch(x, y,
-            static_cast<int>(width()), static_cast<int>(height()));
+            static_cast<int>(width()),
+            static_cast<int>(height()),
+            m_projectionWidthHint,
+            m_projectionHeightHint);
     }
 #endif
 }
@@ -221,5 +368,32 @@ void NNAAvatarCanvas::onTouchAt(float x, float y) {
 void NNAAvatarCanvas::mousePressEvent(QMouseEvent* event) {
     onTouchAt(static_cast<float>(event->position().x()),
               static_cast<float>(event->position().y()));
+    event->accept();
+}
+
+void NNAAvatarCanvas::hoverEnterEvent(QHoverEvent* event) {
+    m_lastHoverUpdateMs = QDateTime::currentMSecsSinceEpoch();
+    const float x = normalizePointerX(static_cast<float>(event->position().x()), static_cast<float>(width()));
+    const float y = normalizePointerY(static_cast<float>(event->position().y()), static_cast<float>(height()));
+    startLookTracking(x, y, 1.0f);
+    event->accept();
+}
+
+void NNAAvatarCanvas::hoverMoveEvent(QHoverEvent* event) {
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (now - m_lastHoverUpdateMs < 16) {
+        event->accept();
+        return;
+    }
+    m_lastHoverUpdateMs = now;
+    const float x = normalizePointerX(static_cast<float>(event->position().x()), static_cast<float>(width()));
+    const float y = normalizePointerY(static_cast<float>(event->position().y()), static_cast<float>(height()));
+    updateLookTracking(x, y, 1.0f);
+    event->accept();
+}
+
+void NNAAvatarCanvas::hoverLeaveEvent(QHoverEvent* event) {
+    m_lastHoverUpdateMs = 0;
+    releaseLookTracking(900);
     event->accept();
 }
