@@ -404,12 +404,16 @@ Item {
 
         Item {
             id: drawerDock
-            width: 292
-            height: 340
+            readonly property real dockTopMargin: 74
+            readonly property real dockRightMargin: root.mix(18, 30, root.compactProgress)
+
+            z: 20
+            width: Math.min(320, parent.width - dockRightMargin * 2)
+            height: Math.max(360, Math.min(430, parent.height - dockTopMargin - 28))
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.topMargin: 74
-            anchors.rightMargin: root.mix(18, 30, root.compactProgress)
+            anchors.topMargin: dockTopMargin
+            anchors.rightMargin: dockRightMargin
 
             HomeModelAdjustDrawer {
                 store: homeStore

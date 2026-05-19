@@ -19,6 +19,7 @@
 #include <QNetworkRequest>
 #include <QSettings>
 #include <QStringList>
+#include <QSysInfo>
 #include <QUrl>
 #include <QUuid>
 
@@ -99,6 +100,41 @@ QJsonObject envelopeDataObject(const QJsonDocument& document) {
         return data.toObject();
     }
     return object;
+}
+
+QString envelopeMessage(const QJsonObject& envelope, const QString& fallback = {}) {
+    if (envelope.value(QStringLiteral("msg")).isString()) {
+        const QString message = envelope.value(QStringLiteral("msg")).toString().trimmed();
+        if (!message.isEmpty()) {
+            return message;
+        }
+    }
+    if (envelope.value(QStringLiteral("message")).isString()) {
+        const QString message = envelope.value(QStringLiteral("message")).toString().trimmed();
+        if (!message.isEmpty()) {
+            return message;
+        }
+    }
+    return fallback;
+}
+
+bool envelopeSuccess(const QJsonObject& envelope, QNetworkReply* reply, int httpStatus) {
+    bool success = reply->error() == QNetworkReply::NoError
+        && (httpStatus == 0 || (httpStatus >= 200 && httpStatus < 300));
+    const QJsonValue codeValue = envelope.value(QStringLiteral("code"));
+    if (codeValue.isDouble()) {
+        const int code = codeValue.toInt();
+        if (code != 0 && code != 200) {
+            success = false;
+        }
+    } else if (codeValue.isString()) {
+        bool ok = false;
+        const int code = codeValue.toString().trimmed().toInt(&ok);
+        if (ok && code != 0 && code != 200) {
+            success = false;
+        }
+    }
+    return success;
 }
 
 void putIfNotEmpty(QJsonObject& object, const QString& key, const QString& value) {
@@ -227,6 +263,9 @@ NNAAppController::NNAAppController(QObject* parent)
         emit stateChanged();
     });
     m_tickTimer.start(1000);
+
+    m_deviceLoginPollTimer.setInterval(1500);
+    connect(&m_deviceLoginPollTimer, &QTimer::timeout, this, &NNAAppController::pollDeviceLogin);
 }
 
 NNAAppController::~NNAAppController() {
@@ -367,6 +406,18 @@ QString NNAAppController::syncStatusText() const {
 
 QString NNAAppController::syncLastError() const {
     return m_syncLastError;
+}
+
+QString NNAAppController::deviceLoginQrText() const {
+    return m_deviceLoginQrText;
+}
+
+QString NNAAppController::deviceLoginStatus() const {
+    return m_deviceLoginStatus;
+}
+
+QString NNAAppController::deviceLoginSessionId() const {
+    return m_deviceLoginSessionId;
 }
 
 bool NNAAppController::accountLoggedIn() const {
@@ -518,6 +569,278 @@ void NNAAppController::loginWithToken(const QString& baseUrl, const QString& tok
 
     saveSyncSettings(normalizedBaseUrl, trimmedToken);
     refreshAccountProfile();
+}
+
+void NNAAppController::sendEmailLoginCode(const QString& baseUrl, const QString& email) {
+    if (m_syncBusy) {
+        return;
+    }
+
+    const QString normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    const QString normalizedEmail = email.trimmed().toLower();
+    if (normalizedBaseUrl.isEmpty()) {
+        m_syncLastError = QStringLiteral("请先填写后端地址");
+        m_syncStatusText.clear();
+        emit syncStateChanged();
+        return;
+    }
+    if (normalizedEmail.isEmpty() || !normalizedEmail.contains(QLatin1Char('@'))) {
+        m_syncLastError = QStringLiteral("请填写有效邮箱");
+        m_syncStatusText.clear();
+        emit syncStateChanged();
+        return;
+    }
+
+    saveSyncSettings(normalizedBaseUrl, m_syncAuthToken);
+
+    QJsonObject body;
+    body.insert(QStringLiteral("email"), normalizedEmail);
+    body.insert(QStringLiteral("scene"), QStringLiteral("login"));
+
+    QNetworkRequest request(QUrl(normalizedBaseUrl + QStringLiteral("/api/app/auth/email/code")));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Accept", "application/json");
+
+    m_syncBusy = true;
+    m_syncLastError.clear();
+    m_syncStatusText = QStringLiteral("正在发送验证码...");
+    emit syncStateChanged();
+
+    QNetworkReply* reply = m_networkManager.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray raw = reply->readAll();
+        const QJsonDocument document = QJsonDocument::fromJson(raw);
+        const QJsonObject envelope = document.isObject() ? document.object() : QJsonObject();
+        const bool success = envelopeSuccess(envelope, reply, httpStatus);
+        QString message = envelopeMessage(envelope, reply->error() == QNetworkReply::NoError
+            ? QStringLiteral("验证码已发送")
+            : reply->errorString());
+
+        if (success) {
+            const QJsonObject data = envelopeDataObject(document);
+            const QString debugCode = jsonString(data, {QStringLiteral("debugCode")});
+            if (!debugCode.isEmpty()) {
+                message = QStringLiteral("验证码已发送：%1").arg(debugCode);
+            }
+        }
+
+        m_syncBusy = false;
+        if (success) {
+            m_syncLastError.clear();
+            m_syncStatusText = message;
+        } else {
+            m_syncStatusText.clear();
+            m_syncLastError = message.isEmpty() ? QStringLiteral("验证码发送失败") : message;
+        }
+        emit syncStateChanged();
+        reply->deleteLater();
+    });
+}
+
+void NNAAppController::loginWithEmailCode(const QString& baseUrl, const QString& email, const QString& code) {
+    if (m_syncBusy) {
+        return;
+    }
+
+    const QString normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    const QString normalizedEmail = email.trimmed().toLower();
+    const QString trimmedCode = code.trimmed();
+    if (normalizedBaseUrl.isEmpty()) {
+        m_syncLastError = QStringLiteral("请先填写后端地址");
+        m_syncStatusText.clear();
+        emit syncStateChanged();
+        return;
+    }
+    if (normalizedEmail.isEmpty() || !normalizedEmail.contains(QLatin1Char('@'))) {
+        m_syncLastError = QStringLiteral("请填写有效邮箱");
+        m_syncStatusText.clear();
+        emit syncStateChanged();
+        return;
+    }
+    if (trimmedCode.isEmpty()) {
+        m_syncLastError = QStringLiteral("请填写验证码");
+        m_syncStatusText.clear();
+        emit syncStateChanged();
+        return;
+    }
+
+    saveSyncSettings(normalizedBaseUrl, m_syncAuthToken);
+
+    QJsonObject body;
+    body.insert(QStringLiteral("email"), normalizedEmail);
+    body.insert(QStringLiteral("code"), trimmedCode);
+    body.insert(QStringLiteral("clientType"), QStringLiteral("DESKTOP"));
+    body.insert(QStringLiteral("deviceId"), m_syncDeviceId);
+    body.insert(QStringLiteral("deviceName"), QSysInfo::machineHostName());
+
+    QNetworkRequest request(QUrl(normalizedBaseUrl + QStringLiteral("/api/app/auth/email/login")));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Accept", "application/json");
+
+    m_syncBusy = true;
+    m_syncLastError.clear();
+    m_syncStatusText = QStringLiteral("正在登录...");
+    emit syncStateChanged();
+
+    QNetworkReply* reply = m_networkManager.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, normalizedBaseUrl]() {
+        const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray raw = reply->readAll();
+        const QJsonDocument document = QJsonDocument::fromJson(raw);
+        const QJsonObject envelope = document.isObject() ? document.object() : QJsonObject();
+        const bool success = envelopeSuccess(envelope, reply, httpStatus);
+        const QString message = envelopeMessage(envelope, reply->error() == QNetworkReply::NoError
+            ? QStringLiteral("登录成功")
+            : reply->errorString());
+
+        m_syncBusy = false;
+        if (success) {
+            applyLoginResponse(normalizedBaseUrl, envelopeDataObject(document));
+            m_syncLastError.clear();
+            m_syncStatusText = message.isEmpty() ? QStringLiteral("登录成功") : message;
+        } else {
+            m_syncStatusText.clear();
+            m_syncLastError = message.isEmpty() ? QStringLiteral("登录失败") : message;
+        }
+        emit syncStateChanged();
+        reply->deleteLater();
+    });
+}
+
+void NNAAppController::startDeviceLogin(const QString& baseUrl) {
+    if (m_syncBusy) {
+        return;
+    }
+
+    const QString normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    if (normalizedBaseUrl.isEmpty()) {
+        m_syncLastError = QStringLiteral("请先填写后端地址");
+        m_syncStatusText.clear();
+        emit syncStateChanged();
+        return;
+    }
+
+    saveSyncSettings(normalizedBaseUrl, m_syncAuthToken);
+    cancelDeviceLogin();
+
+    QJsonObject body;
+    body.insert(QStringLiteral("clientType"), QStringLiteral("DESKTOP"));
+    body.insert(QStringLiteral("deviceId"), m_syncDeviceId);
+    body.insert(QStringLiteral("deviceName"), QSysInfo::machineHostName());
+    body.insert(QStringLiteral("clientVersion"), QStringLiteral("0.1.0"));
+
+    QNetworkRequest request(QUrl(normalizedBaseUrl + QStringLiteral("/api/app/auth/device/start")));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Accept", "application/json");
+
+    m_syncBusy = true;
+    m_syncLastError.clear();
+    m_syncStatusText = QStringLiteral("正在生成扫码登录...");
+    emit syncStateChanged();
+
+    QNetworkReply* reply = m_networkManager.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray raw = reply->readAll();
+        const QJsonDocument document = QJsonDocument::fromJson(raw);
+        const QJsonObject envelope = document.isObject() ? document.object() : QJsonObject();
+        const bool success = envelopeSuccess(envelope, reply, httpStatus);
+        const QString message = envelopeMessage(envelope, reply->error() == QNetworkReply::NoError
+            ? QStringLiteral("扫码登录已生成")
+            : reply->errorString());
+
+        m_syncBusy = false;
+        if (success) {
+            const QJsonObject data = envelopeDataObject(document);
+            m_deviceLoginSessionId = jsonString(data, {QStringLiteral("sessionId")});
+            m_deviceLoginDeviceCode = jsonString(data, {QStringLiteral("deviceCode")});
+            m_deviceLoginQrText = jsonString(data, {QStringLiteral("qrText")});
+            m_deviceLoginStatus = QStringLiteral("WAITING");
+
+            const int pollInterval = jsonInt(data, {QStringLiteral("pollIntervalMs")});
+            m_deviceLoginPollTimer.setInterval(pollInterval > 0 ? pollInterval : 1500);
+            m_deviceLoginPollTimer.start();
+
+            m_syncLastError.clear();
+            m_syncStatusText = message;
+            emit deviceLoginStateChanged();
+        } else {
+            m_syncStatusText.clear();
+            m_syncLastError = message.isEmpty() ? QStringLiteral("扫码登录生成失败") : message;
+        }
+        emit syncStateChanged();
+        reply->deleteLater();
+    });
+}
+
+void NNAAppController::pollDeviceLogin() {
+    if (m_deviceLoginPollInFlight
+        || m_deviceLoginSessionId.isEmpty()
+        || m_deviceLoginDeviceCode.isEmpty()
+        || m_syncBackendBaseUrl.isEmpty()) {
+        return;
+    }
+
+    QJsonObject body;
+    body.insert(QStringLiteral("sessionId"), m_deviceLoginSessionId);
+    body.insert(QStringLiteral("deviceCode"), m_deviceLoginDeviceCode);
+
+    QNetworkRequest request(QUrl(m_syncBackendBaseUrl + QStringLiteral("/api/app/auth/device/poll")));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Accept", "application/json");
+
+    m_deviceLoginPollInFlight = true;
+    QNetworkReply* reply = m_networkManager.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray raw = reply->readAll();
+        const QJsonDocument document = QJsonDocument::fromJson(raw);
+        const QJsonObject envelope = document.isObject() ? document.object() : QJsonObject();
+        const bool success = envelopeSuccess(envelope, reply, httpStatus);
+        const QString message = envelopeMessage(envelope, reply->errorString());
+
+        m_deviceLoginPollInFlight = false;
+        if (success) {
+            const QJsonObject data = envelopeDataObject(document);
+            const QString status = jsonString(data, {QStringLiteral("status")});
+            if (!status.isEmpty()) {
+                m_deviceLoginStatus = status;
+            }
+
+            if (m_deviceLoginStatus == QStringLiteral("CONFIRMED")) {
+                const QJsonObject loginData = data.value(QStringLiteral("login")).toObject();
+                if (!loginData.isEmpty()) {
+                    m_deviceLoginPollTimer.stop();
+                    applyLoginResponse(m_syncBackendBaseUrl, loginData);
+                    m_syncLastError.clear();
+                    m_syncStatusText = QStringLiteral("登录成功");
+                    emit syncStateChanged();
+                }
+            } else if (m_deviceLoginStatus == QStringLiteral("EXPIRED")
+                       || m_deviceLoginStatus == QStringLiteral("CANCELED")
+                       || m_deviceLoginStatus == QStringLiteral("CONSUMED")) {
+                m_deviceLoginPollTimer.stop();
+            }
+            emit deviceLoginStateChanged();
+        } else {
+            m_deviceLoginPollTimer.stop();
+            m_syncStatusText.clear();
+            m_syncLastError = message.isEmpty() ? QStringLiteral("扫码登录轮询失败") : message;
+            emit syncStateChanged();
+        }
+        reply->deleteLater();
+    });
+}
+
+void NNAAppController::cancelDeviceLogin() {
+    m_deviceLoginPollTimer.stop();
+    m_deviceLoginPollInFlight = false;
+    m_deviceLoginSessionId.clear();
+    m_deviceLoginDeviceCode.clear();
+    m_deviceLoginQrText.clear();
+    m_deviceLoginStatus.clear();
+    emit deviceLoginStateChanged();
 }
 
 void NNAAppController::refreshAccountProfile() {
@@ -816,6 +1139,38 @@ void NNAAppController::loadCachedAccountProfile() {
 
     m_accountLoggedIn = !m_syncAuthToken.isEmpty()
         && (m_accountUserId > 0 || !m_accountUserName.trimmed().isEmpty());
+}
+
+void NNAAppController::applyLoginResponse(const QString& baseUrl, const QJsonObject& loginData) {
+    const QString token = jsonString(loginData, {
+        QStringLiteral("token"),
+        QStringLiteral("accessToken")
+    });
+    if (token.isEmpty()) {
+        return;
+    }
+
+    saveSyncSettings(baseUrl, token);
+
+    QJsonObject profile = loginData.value(QStringLiteral("userInfo")).toObject();
+    if (profile.isEmpty()) {
+        profile = loginData.value(QStringLiteral("user")).toObject();
+    }
+    if (profile.isEmpty()) {
+        profile = loginData;
+    }
+
+    const QJsonObject asset = loginData.value(QStringLiteral("userAsset")).toObject();
+    if (!asset.isEmpty()) {
+        for (auto it = asset.constBegin(); it != asset.constEnd(); ++it) {
+            profile.insert(it.key(), it.value());
+        }
+    }
+    if (loginData.contains(QStringLiteral("cloudPointBalance"))) {
+        profile.insert(QStringLiteral("cloudPointBalance"), loginData.value(QStringLiteral("cloudPointBalance")));
+    }
+
+    applyAccountProfile(profile);
 }
 
 void NNAAppController::applyAccountProfile(const QJsonObject& profile) {

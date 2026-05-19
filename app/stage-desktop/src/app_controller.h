@@ -47,6 +47,9 @@ class NNAAppController : public QObject {
     Q_PROPERTY(bool syncBusy READ syncBusy NOTIFY syncStateChanged)
     Q_PROPERTY(QString syncStatusText READ syncStatusText NOTIFY syncStateChanged)
     Q_PROPERTY(QString syncLastError READ syncLastError NOTIFY syncStateChanged)
+    Q_PROPERTY(QString deviceLoginQrText READ deviceLoginQrText NOTIFY deviceLoginStateChanged)
+    Q_PROPERTY(QString deviceLoginStatus READ deviceLoginStatus NOTIFY deviceLoginStateChanged)
+    Q_PROPERTY(QString deviceLoginSessionId READ deviceLoginSessionId NOTIFY deviceLoginStateChanged)
     Q_PROPERTY(bool accountLoggedIn READ accountLoggedIn NOTIFY accountStateChanged)
     Q_PROPERTY(qint64 accountUserId READ accountUserId NOTIFY accountStateChanged)
     Q_PROPERTY(QString accountUserName READ accountUserName NOTIFY accountStateChanged)
@@ -83,6 +86,9 @@ public:
     bool syncBusy() const;
     QString syncStatusText() const;
     QString syncLastError() const;
+    QString deviceLoginQrText() const;
+    QString deviceLoginStatus() const;
+    QString deviceLoginSessionId() const;
     bool accountLoggedIn() const;
     qint64 accountUserId() const;
     QString accountUserName() const;
@@ -102,6 +108,11 @@ public:
     Q_INVOKABLE void sendMessage(const QString& text);
     Q_INVOKABLE void saveSyncSettings(const QString& baseUrl, const QString& token);
     Q_INVOKABLE void loginWithToken(const QString& baseUrl, const QString& token);
+    Q_INVOKABLE void sendEmailLoginCode(const QString& baseUrl, const QString& email);
+    Q_INVOKABLE void loginWithEmailCode(const QString& baseUrl, const QString& email, const QString& code);
+    Q_INVOKABLE void startDeviceLogin(const QString& baseUrl);
+    Q_INVOKABLE void pollDeviceLogin();
+    Q_INVOKABLE void cancelDeviceLogin();
     Q_INVOKABLE void refreshAccountProfile();
     Q_INVOKABLE void logoutAccount();
     Q_INVOKABLE void pushCurrentCompanionToMobile();
@@ -119,6 +130,7 @@ signals:
     void currentModelPathChanged();
     void syncSettingsChanged();
     void syncStateChanged();
+    void deviceLoginStateChanged();
     void accountStateChanged();
     void desktopCompanionEnabledChanged();
 
@@ -126,6 +138,7 @@ private:
     void loadSyncSettings();
     void loadCachedAccountProfile();
     void applyAccountProfile(const QJsonObject& profile);
+    void applyLoginResponse(const QString& baseUrl, const QJsonObject& loginData);
     void clearAccountProfile(bool persist);
     QString normalizeBaseUrl(const QString& value) const;
     QString normalizeAuthorizationValue(const QString& value) const;
@@ -157,6 +170,12 @@ private:
     bool m_syncBusy = false;
     QString m_syncStatusText;
     QString m_syncLastError;
+    QTimer m_deviceLoginPollTimer;
+    bool m_deviceLoginPollInFlight = false;
+    QString m_deviceLoginSessionId;
+    QString m_deviceLoginDeviceCode;
+    QString m_deviceLoginQrText;
+    QString m_deviceLoginStatus;
     bool m_accountLoggedIn = false;
     qint64 m_accountUserId = 0;
     QString m_accountUserName;

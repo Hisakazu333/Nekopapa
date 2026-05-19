@@ -1012,70 +1012,569 @@ Item {
     Dialog {
         id: loginDialog
         modal: true
-        width: Math.min(root.width - 80, 460)
-        title: "登录账号"
+        width: Math.min(root.width - 72, 780)
+        title: ""
         standardButtons: Dialog.NoButton
         anchors.centerIn: parent
+        padding: 0
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        property bool compactLayout: width < 620
+        property bool advancedOpen: false
+        property string defaultBaseUrl: "http://127.0.0.1:8080"
+
+        onOpened: {
+            advancedOpen = false
+        }
+
+        background: Rectangle {
+            radius: 24
+            color: Theme.color("surface.float")
+            border.color: Theme.color("line.soft")
+            border.width: 1
+        }
 
         contentItem: ColumnLayout {
-            spacing: 12
+            width: loginDialog.width
+            spacing: 0
 
-            NNABaseInput {
-                id: baseUrlInput
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                placeholderText: "后端地址"
-                text: appController.syncBackendBaseUrl
+                Layout.topMargin: 26
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                spacing: 12
+
+                Rectangle {
+                    Layout.preferredWidth: 46
+                    Layout.preferredHeight: 46
+                    radius: 14
+                    color: Theme.color("accent.soft")
+
+                    ShapeIcon {
+                        anchors.centerIn: parent
+                        pathData: Icons.paw
+                        size: 24
+                        iconColor: Theme.color("accent.strong")
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "登录 Neko 账户"
+                        font.pixelSize: 22
+                        font.family: Theme.fontUi
+                        font.weight: Font.DemiBold
+                        color: Theme.color("text.primary")
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "邮箱验证码登录 / 手机 App 扫码登录"
+                        font.pixelSize: 13
+                        font.family: Theme.fontUi
+                        color: Theme.color("text.secondary")
+                    }
+                }
             }
 
-            NNABaseInput {
-                id: tokenInput
+            GridLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                placeholderText: "Bearer Token"
-                echoMode: TextInput.Password
-                text: appController.syncAuthToken
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                Layout.topMargin: 24
+                columns: loginDialog.compactLayout ? 1 : 3
+                columnSpacing: 24
+                rowSpacing: 18
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 320
+                    spacing: 12
+
+                    LoginPaneHeader {
+                        title: "邮箱验证码登录"
+                        subtitle: "新用户会自动创建 Neko 账户"
+                    }
+
+                    LoginTextField {
+                        id: emailInput
+                        Layout.fillWidth: true
+                        placeholderText: "邮箱地址"
+                        onAccepted: emailCodeInput.forceInputFocus()
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        LoginTextField {
+                            id: emailCodeInput
+                            Layout.fillWidth: true
+                            placeholderText: "6 位验证码"
+                            onAccepted: appController.loginWithEmailCode(baseUrlInput.text, emailInput.text, emailCodeInput.text)
+                        }
+
+                        LoginSecondaryButton {
+                            Layout.preferredWidth: 88
+                            text: "获取"
+                            enabled: !appController.syncBusy
+                            onTriggered: appController.sendEmailLoginCode(baseUrlInput.text, emailInput.text)
+                        }
+                    }
+
+                    LoginPrimaryButton {
+                        Layout.fillWidth: true
+                        text: appController.syncBusy ? "请稍候" : "登录 / 注册"
+                        enabled: !appController.syncBusy
+                        onTriggered: appController.loginWithEmailCode(baseUrlInput.text, emailInput.text, emailCodeInput.text)
+                    }
+                }
+
+                Rectangle {
+                    visible: !loginDialog.compactLayout
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1
+                    color: Theme.color("line.soft")
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 320
+                    spacing: 12
+
+                    LoginPaneHeader {
+                        title: "手机 App 扫码登录"
+                        subtitle: "已登录手机用户可快速进入桌面端"
+                    }
+
+                    LoginQrPreview {
+                        Layout.alignment: Qt.AlignHCenter
+                        qrText: appController.deviceLoginQrText
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: deviceStatusText()
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 13
+                        font.family: Theme.fontUi
+                        font.weight: Font.Medium
+                        color: appController.deviceLoginStatus === "SCANNED"
+                            ? Theme.color("accent.strong")
+                            : Theme.color("text.secondary")
+                    }
+
+                    LoginPrimaryButton {
+                        Layout.fillWidth: true
+                        text: appController.deviceLoginQrText === "" ? "生成二维码" : "刷新二维码"
+                        enabled: !appController.syncBusy
+                        onTriggered: appController.startDeviceLogin(baseUrlInput.text)
+                    }
+                }
             }
 
             Text {
                 Layout.fillWidth: true
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                Layout.topMargin: 16
                 visible: appController.syncStatusText !== "" || appController.syncLastError !== ""
                 text: appController.syncLastError !== "" ? appController.syncLastError : appController.syncStatusText
                 wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
                 font.pixelSize: 12
                 font.family: Theme.fontUi
                 color: appController.syncLastError !== "" ? Theme.color("state.danger") : Theme.color("text.secondary")
             }
 
-            RowLayout {
+            Rectangle {
                 Layout.fillWidth: true
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                Layout.topMargin: 18
+                Layout.preferredHeight: 1
+                color: Theme.color("line.soft")
+            }
+
+            LoginDisclosureRow {
+                Layout.fillWidth: true
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                Layout.topMargin: 8
+                text: "登录设置"
+                expanded: loginDialog.advancedOpen
+                onTriggered: loginDialog.advancedOpen = !loginDialog.advancedOpen
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                visible: loginDialog.advancedOpen
                 spacing: 10
 
-                NNABaseButton {
+                LoginTextField {
+                    id: baseUrlInput
+                    Layout.fillWidth: true
+                    placeholderText: "后端地址"
+                    text: appController.syncBackendBaseUrl !== "" ? appController.syncBackendBaseUrl : loginDialog.defaultBaseUrl
+                }
+
+                LoginDisclosureRow {
+                    id: devLoginToggle
+                    Layout.fillWidth: true
+                    text: "开发者 Token 登录"
+                    expanded: devLoginTokenInput.visible
+                    onTriggered: devLoginTokenInput.visible = !devLoginTokenInput.visible
+                }
+
+                LoginTextField {
+                    id: devLoginTokenInput
+                    Layout.fillWidth: true
+                    visible: false
+                    placeholderText: "Bearer Token"
+                    echoMode: TextInput.Password
+                    text: appController.syncAuthToken
+                }
+
+                LoginSecondaryButton {
+                    Layout.alignment: Qt.AlignRight
+                    visible: devLoginTokenInput.visible
+                    Layout.preferredWidth: 116
+                    text: "Token 登录"
+                    enabled: !appController.syncBusy
+                    onTriggered: appController.loginWithToken(baseUrlInput.text, devLoginTokenInput.text)
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 28
+                Layout.rightMargin: 28
+                Layout.topMargin: 16
+                Layout.bottomMargin: 24
+                spacing: 10
+
+                LoginPlainButton {
                     text: "取消"
-                    buttonType: NNABaseButton.ButtonType.Secondary
-                    onClicked: loginDialog.close()
+                    onTriggered: {
+                        appController.cancelDeviceLogin()
+                        loginDialog.close()
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
 
-                NNABaseButton {
+                LoginPlainButton {
+                    visible: root.loggedIn
                     text: "退出登录"
-                    enabled: root.loggedIn
-                    buttonType: NNABaseButton.ButtonType.Ghost
-                    onClicked: {
+                    destructive: true
+                    onTriggered: {
                         appController.logoutAccount()
-                        tokenInput.text = ""
+                        devLoginTokenInput.text = ""
                     }
                 }
+            }
+        }
+    }
 
-                NNABaseButton {
-                    text: "登录"
-                    iconPath: Icons.check
-                    enabled: !appController.syncBusy
-                    buttonType: NNABaseButton.ButtonType.Primary
-                    onClicked: appController.loginWithToken(baseUrlInput.text, tokenInput.text)
+    function deviceStatusText() {
+        switch (appController.deviceLoginStatus) {
+            case "WAITING": return "使用 NekoBuddy 手机 App 扫码登录"
+            case "SCANNED": return "已扫码，请在手机上确认登录"
+            case "CONFIRMED": return "登录中"
+            case "EXPIRED": return "已过期"
+            case "CANCELED": return "手机端已取消"
+            case "CONSUMED": return "已完成"
+        }
+        return "点击生成二维码"
+    }
+
+    component LoginPaneHeader: ColumnLayout {
+        property string title: ""
+        property string subtitle: ""
+
+        Layout.fillWidth: true
+        spacing: 4
+
+        Text {
+            Layout.fillWidth: true
+            text: parent.title
+            font.pixelSize: 16
+            font.family: Theme.fontUi
+            font.weight: Font.DemiBold
+            color: Theme.color("text.primary")
+        }
+
+        Text {
+            Layout.fillWidth: true
+            text: parent.subtitle
+            wrapMode: Text.Wrap
+            font.pixelSize: 12
+            font.family: Theme.fontUi
+            color: Theme.color("text.secondary")
+        }
+    }
+
+    component LoginTextField: Rectangle {
+        id: loginField
+        property alias text: textField.text
+        property alias placeholderText: textField.placeholderText
+        property alias echoMode: textField.echoMode
+
+        signal accepted()
+
+        function forceInputFocus() {
+            textField.forceActiveFocus()
+        }
+
+        Layout.preferredHeight: 48
+        radius: 12
+        color: Theme.color("surface.sunken")
+        border.color: textField.activeFocus
+            ? Theme.color("accent.base")
+            : Theme.color("line.soft")
+        border.width: 1
+
+        Behavior on border.color { ColorAnimation { duration: 120 } }
+
+        TextField {
+            id: textField
+            anchors.fill: parent
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            anchors.topMargin: 5
+            anchors.bottomMargin: 5
+            background: Item {}
+            font.pixelSize: 15
+            font.family: Theme.fontUi
+            color: Theme.color("text.primary")
+            placeholderTextColor: Theme.color("text.tertiary")
+            selectByMouse: true
+            verticalAlignment: TextInput.AlignVCenter
+            Keys.onReturnPressed: loginField.accepted()
+            Keys.onEnterPressed: loginField.accepted()
+        }
+    }
+
+    component LoginPrimaryButton: Rectangle {
+        id: primaryButton
+        property string text: ""
+        property bool enabled: true
+
+        signal triggered()
+
+        Layout.preferredHeight: 48
+        radius: 12
+        color: Theme.color("accent.strong")
+        opacity: enabled ? (buttonMouse.pressed ? 0.76 : buttonMouse.containsMouse ? 0.90 : 1.0) : 0.45
+
+        Behavior on opacity { NumberAnimation { duration: 100 } }
+
+        Text {
+            anchors.centerIn: parent
+            text: primaryButton.text
+            font.pixelSize: 15
+            font.family: Theme.fontUi
+            font.weight: Font.DemiBold
+            color: Theme.color("text.onAccent")
+        }
+
+        MouseArea {
+            id: buttonMouse
+            anchors.fill: parent
+            enabled: primaryButton.enabled
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: primaryButton.triggered()
+        }
+    }
+
+    component LoginSecondaryButton: Rectangle {
+        id: secondaryButton
+        property string text: ""
+        property bool enabled: true
+        signal triggered()
+
+        Layout.preferredHeight: 48
+        radius: 12
+        color: Theme.color("surface.base")
+        border.color: Theme.alpha("accent.strong", 0.36)
+        border.width: 1
+        opacity: enabled ? (secondaryMouse.pressed ? 0.72 : secondaryMouse.containsMouse ? 0.88 : 1.0) : 0.45
+
+        Text {
+            anchors.centerIn: parent
+            text: secondaryButton.text
+            font.pixelSize: 14
+            font.family: Theme.fontUi
+            font.weight: Font.DemiBold
+            color: Theme.color("accent.strong")
+        }
+
+        MouseArea {
+            id: secondaryMouse
+            anchors.fill: parent
+            enabled: secondaryButton.enabled
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: secondaryButton.triggered()
+        }
+
+        Behavior on opacity { NumberAnimation { duration: 100 } }
+    }
+
+    component LoginPlainButton: Rectangle {
+        id: plainButton
+        property string text: ""
+        property bool destructive: false
+        signal triggered()
+
+        implicitWidth: plainLabel.implicitWidth + 8
+        Layout.preferredHeight: 30
+        radius: 8
+        color: plainMouse.pressed ? Theme.alpha("line.soft", 0.48) : "transparent"
+
+        Text {
+            id: plainLabel
+            anchors.centerIn: parent
+            text: plainButton.text
+            font.pixelSize: 14
+            font.family: Theme.fontUi
+            font.weight: Font.Medium
+            color: plainButton.destructive ? Theme.color("state.danger") : Theme.color("text.secondary")
+        }
+
+        MouseArea {
+            id: plainMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: plainButton.triggered()
+        }
+    }
+
+    component LoginDisclosureRow: Rectangle {
+        id: disclosure
+        property string text: ""
+        property bool expanded: false
+        signal triggered()
+
+        Layout.preferredHeight: 34
+        radius: 10
+        color: disclosureMouse.pressed ? Theme.alpha("line.soft", 0.42) : "transparent"
+
+        RowLayout {
+            anchors.fill: parent
+            spacing: 8
+
+            Text {
+                Layout.fillWidth: true
+                text: disclosure.text
+                font.pixelSize: 13
+                font.family: Theme.fontUi
+                font.weight: Font.Medium
+                color: Theme.color("text.secondary")
+            }
+
+            ShapeIcon {
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                pathData: Icons.chevronRight
+                size: 16
+                iconColor: Theme.color("text.tertiary")
+                rotation: disclosure.expanded ? 90 : 0
+
+                Behavior on rotation { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+            }
+        }
+
+        MouseArea {
+            id: disclosureMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: disclosure.triggered()
+        }
+    }
+
+    component LoginQrPreview: Rectangle {
+        id: qrPreview
+        property string qrText: ""
+        readonly property int cells: 29
+        readonly property int cellSize: 5
+
+        function finder(row, col, top, left) {
+            var r = row - top
+            var c = col - left
+            if (r < 0 || c < 0 || r > 6 || c > 6)
+                return false
+            return r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)
+        }
+
+        function moduleOn(index) {
+            var row = Math.floor(index / cells)
+            var col = index % cells
+            if (finder(row, col, 1, 1) || finder(row, col, 1, cells - 8) || finder(row, col, cells - 8, 1))
+                return true
+            if (qrText === "")
+                return false
+            var len = qrText.length
+            var code = qrText.charCodeAt((row * 7 + col * 13) % len)
+            return ((code + row * 17 + col * 31 + row * col) % 9) < 4
+        }
+
+        Layout.preferredWidth: 184
+        Layout.preferredHeight: 184
+        radius: 18
+        color: "#FFFFFF"
+        border.color: Theme.color("line.soft")
+        border.width: 1
+
+        Grid {
+            id: qrGrid
+            anchors.centerIn: parent
+            columns: qrPreview.cells
+            rows: qrPreview.cells
+            spacing: 0
+            visible: qrPreview.qrText !== ""
+
+            Repeater {
+                model: qrPreview.cells * qrPreview.cells
+
+                Rectangle {
+                    width: qrPreview.cellSize
+                    height: qrPreview.cellSize
+                    color: qrPreview.moduleOn(index) ? "#111111" : "#FFFFFF"
                 }
+            }
+        }
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 10
+            visible: qrPreview.qrText === ""
+
+            ShapeIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                pathData: Icons.iot
+                size: 34
+                iconColor: "#8E8E93"
+            }
+
+            Text {
+                width: 126
+                text: "生成后用手机 App 扫描"
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 12
+                font.family: Theme.fontUi
+                color: "#8E8E93"
             }
         }
     }
