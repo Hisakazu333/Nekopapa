@@ -43,14 +43,14 @@ NSView *nativeViewForWindow(QQuickWindow *window)
 
 NSColor *accentColor()
 {
-    return [NSColor colorWithCalibratedRed:0.80 green:0.26 blue:0.35 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.0 green:0.40 blue:0.80 alpha:1.0];
 }
 
 NSColor *mutedColor(bool dark)
 {
     return dark
-        ? [NSColor colorWithCalibratedWhite:0.82 alpha:0.72]
-        : [NSColor colorWithCalibratedRed:0.30 green:0.25 blue:0.23 alpha:0.82];
+        ? [NSColor colorWithCalibratedWhite:0.84 alpha:0.74]
+        : [NSColor colorWithCalibratedWhite:0.16 alpha:0.84];
 }
 
 NSColor *activeBackgroundColor(bool dark)
@@ -70,7 +70,7 @@ NSColor *selectorFillColor(bool dark, bool pressed)
 {
     return dark
         ? [NSColor colorWithCalibratedWhite:1.0 alpha:(pressed ? 0.14 : 0.10)]
-        : [NSColor colorWithCalibratedRed:0.995 green:0.988 blue:0.982 alpha:(pressed ? 0.94 : 0.88)];
+        : [NSColor colorWithCalibratedRed:0.918 green:0.953 blue:1.0 alpha:(pressed ? 0.98 : 0.92)];
 }
 
 NSArray<id> *selectorSheenColors(bool dark, bool pressed)
@@ -90,18 +90,18 @@ NSArray<id> *selectorSheenColors(bool dark, bool pressed)
 
 NSRect selectorFallbackFrameForPage(NSRect bounds, NSInteger page)
 {
-    static constexpr CGFloat edgeX = 8.0;
+    static constexpr CGFloat edgeX = 10.0;
     static constexpr CGFloat edgeY = 6.0;
-    static constexpr CGFloat spacing = 5.0;
+    static constexpr CGFloat spacing = 8.0;
     static constexpr NSInteger itemCount = 6;
 
     const CGFloat availableWidth = MAX(1.0, bounds.size.width - edgeX * 2.0 - spacing * (itemCount - 1));
     const CGFloat itemWidth = availableWidth / itemCount;
     const NSInteger clampedPage = MAX(0, MIN(itemCount - 1, page));
-    const CGFloat selectorWidth = MIN(MAX(46.0, itemWidth * 0.58), MAX(1.0, itemWidth - 8.0));
-    const CGFloat selectorHeight = MIN(MAX(28.0, bounds.size.height * 0.45), MAX(1.0, bounds.size.height - edgeY * 2.0 - 10.0));
+    const CGFloat selectorWidth = MIN(MAX(44.0, itemWidth * 0.42), MAX(1.0, itemWidth - 8.0));
+    const CGFloat selectorHeight = MIN(MAX(30.0, bounds.size.height * 0.42), MAX(1.0, bounds.size.height - edgeY * 2.0 - 10.0));
     const CGFloat selectorX = bounds.origin.x + edgeX + clampedPage * (itemWidth + spacing) + floor((itemWidth - selectorWidth) / 2.0);
-    const CGFloat selectorY = bounds.origin.y + floor((bounds.size.height - selectorHeight) / 2.0) - 1.0;
+    const CGFloat selectorY = bounds.origin.y + floor((bounds.size.height - selectorHeight) / 2.0);
     return NSMakeRect(
         selectorX,
         selectorY,
@@ -129,12 +129,12 @@ NSRect selectorFrameForButton(NSView *button, NSView *content, NSInteger page, b
         return selectorFallbackFrameForPage([content bounds], page);
 
     const CGFloat maxWidth = MAX(1.0, NSWidth(buttonFrame) - 10.0);
-    const CGFloat maxHeight = MAX(1.0, NSHeight(buttonFrame) - 10.0);
+    const CGFloat maxHeight = MAX(1.0, NSHeight(buttonFrame) - 6.0);
     const CGFloat width = MIN(maxWidth, MAX(44.0, NSWidth(anchorFrame) + (pressed ? 22.0 : 18.0)));
-    const CGFloat height = MIN(maxHeight, MAX(28.0, NSHeight(anchorFrame) + (pressed ? 8.0 : 6.0)));
+    const CGFloat height = MIN(maxHeight, MAX(30.0, NSHeight(anchorFrame) + (pressed ? 10.0 : 8.0)));
     const CGFloat x = floor(NSMidX(anchorFrame) - width / 2.0);
     const CGFloat y = floor(NSMidY(anchorFrame) - height / 2.0);
-    return NSMakeRect(x, MAX(3.0, y), width, height);
+    return NSMakeRect(x, MAX(4.0, y), width, height);
 }
 
 NSRect selectorTargetFrame(NSView *content, NSArray *buttons, NSInteger currentPage, NSInteger pressedPage)
@@ -155,7 +155,7 @@ NSImage *symbolImage(NSString *name, bool active)
     if (@available(macOS 11.0, *)) {
         NSImage *image = [NSImage imageWithSystemSymbolName:name accessibilityDescription:nil];
         NSImageSymbolConfiguration *config = [NSImageSymbolConfiguration
-            configurationWithPointSize:(active ? 23.5 : 23.0)
+            configurationWithPointSize:(active ? 23.5 : 22.5)
             weight:(active ? NSFontWeightSemibold : NSFontWeightRegular)];
         return [image imageWithSymbolConfiguration:config];
     }
@@ -168,7 +168,7 @@ NSAttributedString *dockTitle(NSString *title, NSColor *color, bool active)
     style.alignment = NSTextAlignmentCenter;
 
     NSFont *font = active
-        ? [NSFont systemFontOfSize:11.5 weight:NSFontWeightSemibold]
+        ? [NSFont systemFontOfSize:11.7 weight:NSFontWeightSemibold]
         : [NSFont systemFontOfSize:11.5 weight:NSFontWeightMedium];
     NSDictionary *attrs = @{
         NSForegroundColorAttributeName: color,
@@ -304,11 +304,11 @@ NSString *dockMenuSymbol(NSInteger page, NSInteger item)
 
     const NSRect bounds = self.bounds;
     const CGFloat imageSize = self.itemActive ? 24.0 : 23.0;
-    const CGFloat labelHeight = 16.0;
-    const CGFloat gap = 4.0;
+    const CGFloat labelHeight = 15.0;
+    const CGFloat gap = 3.0;
     const CGFloat totalHeight = imageSize + gap + labelHeight;
     const CGFloat imageX = floor((NSWidth(bounds) - imageSize) / 2.0);
-    const CGFloat imageY = floor(MAX(4.0, (NSHeight(bounds) - totalHeight) / 2.0));
+    const CGFloat imageY = floor(MAX(5.0, (NSHeight(bounds) - totalHeight) / 2.0));
     self.imageView.frame = NSMakeRect(imageX, imageY, imageSize, imageSize);
     self.titleLabel.frame = NSMakeRect(2.0, NSMaxY(self.imageView.frame) + gap, MAX(1.0, NSWidth(bounds) - 4.0), labelHeight);
 }
@@ -491,6 +491,7 @@ void NNAMacOSDockView::setCurrentPage(int page)
         return;
     m_currentPage = page;
     emit currentPageChanged();
+    updateNativeAppearance();
     updateNativeSelection();
 }
 
@@ -684,8 +685,8 @@ void NNAMacOSDockView::ensureNativeView()
         stack.orientation = NSUserInterfaceLayoutOrientationHorizontal;
         stack.alignment = NSLayoutAttributeCenterY;
         stack.distribution = NSStackViewDistributionFillEqually;
-        stack.spacing = 5.0;
-        stack.edgeInsets = NSEdgeInsetsMake(6.0, 8.0, 6.0, 8.0);
+        stack.spacing = 8.0;
+        stack.edgeInsets = NSEdgeInsetsMake(6.0, 10.0, 6.0, 10.0);
         stack.frame = [content bounds];
         stack.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
         [content addSubview:stack positioned:NSWindowAbove relativeTo:selector];
@@ -798,10 +799,11 @@ void NNAMacOSDockView::updateNativeAppearance()
         return;
 
     root.wantsLayer = YES;
+    [root setAlphaValue:0.94];
     root.layer.cornerRadius = m_radius;
     root.layer.shadowColor = [NSColor colorWithCalibratedWhite:0.0 alpha:1.0].CGColor;
-    root.layer.shadowOpacity = m_dark ? 0.18f : 0.10f;
-    root.layer.shadowRadius = 14.0;
+    root.layer.shadowOpacity = m_dark ? 0.12f : 0.07f;
+    root.layer.shadowRadius = 11.0;
     root.layer.shadowOffset = CGSizeMake(0.0, -1.0);
 
     effect.wantsLayer = YES;

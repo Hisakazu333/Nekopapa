@@ -8,6 +8,7 @@ Item {
     id: shell
 
     property int currentPage: 0
+    property string agentMode: "ide"
     readonly property real designWidth: 735
     readonly property real designHeight: 944
     readonly property real stageAspect: designWidth / designHeight
@@ -27,11 +28,12 @@ Item {
     readonly property real layoutWidth: mix(width, designWidth, shapeCompactProgress)
     readonly property real layoutHeight: mix(height, designHeight, compactProgress)
     readonly property real layoutScale: mix(1.0, compactScale, compactProgress)
-    readonly property real dockAvailableWidth: Math.max(1, stageWidth - 28 * stageScale)
-    readonly property real dockWidth: Math.round(Math.min(dockAvailableWidth, 505 * stageScale))
-    readonly property real dockHeight: Math.round(62 * stageScale)
-    readonly property real dockBottomMargin: Math.round(10 * stageScale)
-    readonly property real dockRadius: Math.round(dockHeight * 0.40)
+    readonly property real dockWidth: desktopLayout.dockWidth
+    readonly property real dockHeight: desktopLayout.dockHeight
+    readonly property real dockBottomMargin: desktopLayout.dockBottomMargin
+    readonly property real dockRadius: desktopLayout.dockRadius
+    readonly property real dockClearance: desktopLayout.dockClearance
+    readonly property real dockItemScale: Math.max(0.92, Math.min(1.08, dockHeight / 62))
 
     readonly property var navItems: [
         { label: "\u966A\u4F34", icon: Icons.paw, paw: true },
@@ -44,6 +46,13 @@ Item {
 
     readonly property bool overlayPanelOpen: currentPage !== 0 && currentPage !== 1 && currentPage !== 4 && currentPage !== 5
 
+    NNADesktopLayoutMetrics {
+        id: desktopLayout
+        windowWidth: shell.width
+        windowHeight: shell.height
+        contentMaxWidth: 1168
+    }
+
     Rectangle {
         anchors.fill: parent
         color: Theme.color("bg.canvas")
@@ -52,21 +61,21 @@ Item {
     Item {
         id: homeStage
         anchors.fill: parent
-        visible: shell.currentPage !== 1 && shell.currentPage !== 5
+        visible: shell.currentPage !== 1 && shell.currentPage !== 4 && shell.currentPage !== 5
         clip: true
 
         HomeView {
             id: homeView
             anchors.fill: parent
             shellRef: shell
-            dockClearance: shell.dockHeight + shell.dockBottomMargin + 12 * shell.stageScale
+            dockClearance: shell.dockClearance
         }
     }
 
     ChatView {
         id: chatView
         anchors.fill: parent
-        dockClearance: shell.dockHeight + shell.dockBottomMargin + 12
+        dockClearance: shell.dockClearance
         visible: shell.currentPage === 1
         opacity: visible ? 1 : 0
 
@@ -76,8 +85,23 @@ Item {
     NNAMineView {
         id: mineView
         anchors.fill: parent
-        dockClearance: shell.dockHeight + shell.dockBottomMargin + 12
+        dockClearance: shell.dockClearance
+        desktopSidebarWidth: desktopLayout.sidebarWidth
+        desktopContentWidth: desktopLayout.contentWidth
+        desktopContentGutter: desktopLayout.contentGutter
         visible: shell.currentPage === 5
+        opacity: visible ? 1 : 0
+
+        Behavior on opacity { NumberAnimation { duration: 180 } }
+    }
+
+    AgentView {
+        id: agentView
+        anchors.fill: parent
+        dockClearance: shell.dockClearance
+        shellRef: shell
+        mode: shell.agentMode
+        visible: shell.currentPage === 4
         opacity: visible ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -187,11 +211,8 @@ Item {
 
     Item {
         id: dockStage
-        z: 20
-        x: shell.stageX
-        y: shell.stageY
-        width: shell.stageWidth
-        height: shell.stageHeight
+        z: 999
+        anchors.fill: parent
 
         Item {
             id: dockFrame
@@ -228,69 +249,85 @@ Item {
                 id: dock
                 anchors.fill: parent
                 visible: !nativeDock.nativeActive
+                opacity: 1.0
+
+                Behavior on opacity { NumberAnimation { duration: 160 } }
 
                 NNAGlassPanel {
                     anchors.fill: parent
                     radius: nativeDock.radius
-                    topLineMargin: 22 * shell.stageScale
-                    shadowOffset: 7 * shell.stageScale
+                    topLineMargin: 22 * shell.dockItemScale
+                    shadowOffset: 7 * shell.dockItemScale
                 }
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 8 * shell.stageScale
-                    anchors.rightMargin: 8 * shell.stageScale
-                    anchors.topMargin: 6 * shell.stageScale
-                    anchors.bottomMargin: 6 * shell.stageScale
-                    spacing: 5 * shell.stageScale
+                    anchors.leftMargin: 8 * shell.dockItemScale
+                    anchors.rightMargin: 8 * shell.dockItemScale
+                    anchors.topMargin: 6 * shell.dockItemScale
+                    anchors.bottomMargin: 6 * shell.dockItemScale
+                    spacing: 5 * shell.dockItemScale
 
                     Repeater {
                         model: shell.navItems
 
-                        delegate: Rectangle {
+                        delegate: Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            radius: 24
 
                             readonly property bool active: shell.currentPage === index
 
-                            color: active
-                                ? "transparent"
-                                : dockMouse.containsMouse
-                                    ? Theme.alpha("surface.sunken", Theme.isDark ? 0.20 : 0.34)
-                                    : "transparent"
-                            border.color: "transparent"
-                            border.width: 0
-
-                            Behavior on color { ColorAnimation { duration: 140 } }
-
                             Column {
                                 anchors.centerIn: parent
-                                spacing: 7
+                                spacing: 7 * shell.dockItemScale
 
-                                PawNavIcon {
+                                Item {
+                                    id: iconSlot
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: modelData.paw === true
-                                    size: (active ? 27 : 25) * shell.stageScale
-                                    active: parent.parent.active
-                                    iconColor: active ? Theme.color("accent.base") : Theme.color("text.secondary")
-                                }
+                                    width: 44 * shell.dockItemScale
+                                    height: 32 * shell.dockItemScale
 
-                                ShapeIcon {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: modelData.paw !== true
-                                    pathData: modelData.icon
-                                    size: (active ? 27 : 25) * shell.stageScale
-                                    strokeWidth: active ? 2.25 : 2.10
-                                    iconColor: active ? Theme.color("accent.base") : Theme.color("text.secondary")
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: dockMouse.pressed ? 46 * shell.dockItemScale : 42 * shell.dockItemScale
+                                        height: 32 * shell.dockItemScale
+                                        radius: height / 2
+                                        color: active
+                                            ? Theme.alpha("accent.soft", Theme.isDark ? 0.30 : 0.72)
+                                            : dockMouse.containsMouse
+                                                ? Theme.alpha("surface.sunken", Theme.isDark ? 0.20 : 0.34)
+                                                : "transparent"
+                                        border.color: "transparent"
+                                        border.width: 0
+
+                                        Behavior on color { ColorAnimation { duration: 140 } }
+                                        Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                                    }
+
+                                    PawNavIcon {
+                                        anchors.centerIn: parent
+                                        visible: modelData.paw === true
+                                        size: (active ? 27 : 25) * shell.dockItemScale
+                                        active: parent.parent.parent.active
+                                        iconColor: active ? Theme.color("accent.base") : Theme.color("text.secondary")
+                                    }
+
+                                    ShapeIcon {
+                                        anchors.centerIn: parent
+                                        visible: modelData.paw !== true
+                                        pathData: modelData.icon
+                                        size: (active ? 27 : 25) * shell.dockItemScale
+                                        strokeWidth: active ? 1.72 : 1.62
+                                        iconColor: active ? Theme.color("accent.base") : Theme.color("text.secondary")
+                                    }
                                 }
 
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: modelData.label
-                                    font.pixelSize: 12 * shell.stageScale
+                                    font.pixelSize: 12 * shell.dockItemScale
                                     font.family: Theme.fontUi
-                                    font.weight: active ? Font.Bold : Font.Medium
+                                    font.weight: active ? Font.DemiBold : Font.Medium
                                     renderType: Text.NativeRendering
                                     color: active ? Theme.color("accent.strong") : Theme.color("text.secondary")
                                 }

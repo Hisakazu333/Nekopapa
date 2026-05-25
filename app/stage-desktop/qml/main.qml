@@ -5,13 +5,13 @@ import QtQuick.Window
 
 ApplicationWindow {
     id: root
-    readonly property int targetStageWidth: 735
+    readonly property int targetStageWidth: 1440
     readonly property int targetStageHeight: 944
 
     width: targetStageWidth
     height: targetStageHeight + 38
-    minimumWidth: 680
-    minimumHeight: 820
+    minimumWidth: 980
+    minimumHeight: 720
     visible: false
     title: "OpenNeko Engine"
     flags: Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint
@@ -83,6 +83,12 @@ ApplicationWindow {
                 Layout.preferredHeight: 24
                 iconPath: Icons.settings
                 onTriggered: shell.currentPage = 5
+            }
+
+            ChromeModeSwitch {
+                Layout.preferredWidth: 94
+                Layout.preferredHeight: 26
+                visible: shell.currentPage === 4
             }
 
             ChromeAvatar {
@@ -170,6 +176,64 @@ ApplicationWindow {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: shell.currentPage = 5
+        }
+    }
+
+    component ChromeModeSwitch: Rectangle {
+        id: switcher
+
+        radius: 10
+        color: Theme.alpha("surface.sunken", Theme.isDark ? 0.44 : 0.54)
+        border.color: Theme.alpha("line.soft", 0.76)
+        border.width: 1
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 2
+            spacing: 2
+
+            ModeOption {
+                Layout.fillWidth: true
+                text: "日常"
+                active: shell.agentMode === "daily"
+                onTriggered: shell.agentMode = "daily"
+            }
+
+            ModeOption {
+                Layout.fillWidth: true
+                text: "IDE"
+                active: shell.agentMode === "ide"
+                onTriggered: shell.agentMode = "ide"
+            }
+        }
+    }
+
+    component ModeOption: Rectangle {
+        id: option
+        property string text: ""
+        property bool active: false
+        signal triggered()
+
+        Layout.fillHeight: true
+        radius: 8
+        color: active ? Theme.color("surface.base") : "transparent"
+        border.color: active ? Theme.alpha("accent.base", 0.38) : "transparent"
+        border.width: active ? 1 : 0
+
+        Text {
+            anchors.centerIn: parent
+            text: option.text
+            font.pixelSize: 11
+            font.family: Theme.fontUi
+            font.weight: option.active ? Font.DemiBold : Font.Medium
+            color: option.active ? Theme.color("accent.strong") : Theme.color("text.secondary")
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: option.triggered()
         }
     }
 }

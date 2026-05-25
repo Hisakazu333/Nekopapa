@@ -2,9 +2,63 @@
 
 ## Desktop Client UI Architecture Design
 
+> 2026-05-22 规范声明：本文保留为早期桌面客户端模块架构参考。视觉语言、桌面响应式、Dock、设置页、“我的”页、Agent IDE 和日常模式的最终实现规范，以 `文档/OpenNeko_Engine_DESIGN.md` 为最高优先级。
+>
+> 如果本文中的旧设计与 `OpenNeko_Engine_DESIGN.md` 冲突，必须以后者为准。尤其禁止继续按本文早期草图实现 72px 移动式侧栏、手机 TabBar、emoji 图标导航、大卡片萌系仪表盘或固定截图尺寸。
+
 **技术栈：** Qt6 / QML + C++ (libopenneko)
-**视觉风格：** 二次元萌系
+**视觉风格：** 桌面原生的陪伴型 Agent 工作台，详见 `文档/OpenNeko_Engine_DESIGN.md`
 **目标平台：** Windows 11 / macOS / Linux
+
+---
+
+## 零、当前强制布局规则
+
+本章是当前实现的硬规则，优先级高于本文后面的早期草图。
+
+### 0.1 桌面端不能复用移动舞台
+
+- `designWidth: 735` / `designHeight: 944` 只能作为移动或模型舞台参考，不能作为桌面主窗口布局基准。
+- `stageScale` 只能用于 Live2D 舞台和 Shell 全局 Floating Dock 的视觉尺度，不能支配“我的”、设置中心、Agent IDE、日常模式的页面内容布局。
+- 桌面页必须使用窗口级 `DesktopLayoutMetrics`，不能用截图绝对坐标或 `currentPage === 某页` 的尺寸补丁堆布局。
+- 横向拉伸窗口时，内容增长到上限后必须停止，额外空间变成留白。
+
+### 0.2 DesktopLayoutMetrics
+
+桌面设置类页面必须共享这些指标：
+
+| Metric | 固定规则 |
+| --- | --- |
+| `sidebarWidth` | `clamp(windowWidth * 0.20, 260, 336)`，紧凑桌面可降到 236 |
+| `mainAreaX` | `sidebarWidth + dividerWidth` |
+| `mainAreaWidth` | `windowWidth - mainAreaX` |
+| `contentMaxWidth` | “我的”页 1168；设置中心 680-760；Agent IDE 走三栏工作台规则 |
+| `contentWidth` | `min(mainAreaWidth - contentGutter * 2, contentMaxWidth)` |
+| `contentX` | `mainAreaX + (mainAreaWidth - contentWidth) / 2` |
+| `dockWidth` | “我的”页 `clamp(windowWidth * 0.66, 680, 1048)`；首页 / 日常页使用自己的短 Dock |
+| `dockHeight` | “我的”页 58-66；首页 / 日常页 `62 * stageScale` |
+| `dockBottomMargin` | “我的”页 24-30；首页 / 日常页 `42 * stageScale` |
+| `dockCenterX` | `windowWidth / 2`，Dock 属于全窗口 Shell |
+| `dockClearance` | “我的”页 `dockHeight + dockBottomMargin + 32`；首页 / 日常页 `dockHeight + dockBottomMargin + 16 * stageScale` |
+
+### 0.3 “我的”页固定骨架
+
+- 左侧 Sidebar 固定在窗口左侧，宽度 260-336。
+- 主内容从 Sidebar 右侧开始，在剩余区域居中。
+- 主内容最大宽度 1168，宽屏只增加留白。
+- 顶部 `当前同伴` 面板宽度等于 `contentWidth`，高度 360-390。
+- 下方设置区在 `contentWidth >= 900` 时两列，小于 900 时单列。
+- 两列间距 48-56，分组间距 24-32。
+- 底部 Dock 由 Shell 全窗口居中悬浮，不放进 ScrollView，不跟随内容容器裁切。
+
+### 0.4 必须返工的情况
+
+- 桌面页继续按 735px 移动比例缩放。
+- 横向拉伸窗口时，侧栏、内容、Dock 各自按不同公式漂移。
+- Dock 贴底、被裁切、被滚动内容遮挡，或变成手机 TabBar。
+- AppKit 原生 Dock 和 QML fallback 使用两套不同内部比例。
+- 设置行、按钮、图标、文字随窗口宽度继续放大。
+- 为一张截图写死绝对尺寸和坐标。
 
 ---
 
@@ -66,11 +120,11 @@
 └────────┴─────────────────────────────────────────────────┘
 ```
 
-### 侧边栏（左侧固定，约 72px 宽）
+### 侧边栏（历史草图，当前实现以第零章为准）
 
-- 顶部：当前猫娘头像 + 名字（可切换猫娘）
-- 导航图标列表（萌系圆角图标，hover 时猫爪高亮效果）
-- 底部：「放出桌面」按钮（猫爪形状，点击后猫娘出现在桌面）
+- 本段早期草图中的 72px 图标栏不再作为“我的”页、设置中心和日常模式的实现规格。
+- 当前设置类页面使用 260-336 的桌面 Sidebar，包含头像、名称、搜索和分类导航。
+- 首页或陪伴舞台如需轻量导航，也必须遵守全窗口 Shell 与 Floating Dock 规则，不能恢复手机 TabBar。
 
 ### 页面详细设计
 

@@ -2,9 +2,11 @@
 
 Icons::Icons(QObject* parent) : QObject(parent) {}
 
+#define NNA_LINE_ICON(name) QStringLiteral("qrc:/qt/qml/OpenNeko/qml/assets/icons/line/" name ".svg")
+
 // Navigation
 QString Icons::home() const {
-    return QStringLiteral("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z M9 22V12h6v10");
+    return NNA_LINE_ICON("home");
 }
 QString Icons::chat() const {
     return QStringLiteral("M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z");
@@ -25,45 +27,45 @@ QString Icons::world() const {
     return QStringLiteral("M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z");
 }
 QString Icons::iot() const {
-    return QStringLiteral("M5 12.55a11 11 0 0 1 14.08 0 M1.42 9a16 16 0 0 1 21.16 0 M8.53 16.11a6 6 0 0 1 6.95 0");
+    return NNA_LINE_ICON("iot");
 }
 QString Icons::settings() const {
-    return QStringLiteral("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z");
+    return NNA_LINE_ICON("settings");
 }
 
 // Actions
 QString Icons::send() const {
-    return QStringLiteral("M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z");
+    return NNA_LINE_ICON("send");
 }
 QString Icons::mic() const {
     return QStringLiteral("M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v4 M8 23h8");
 }
 QString Icons::volume() const {
-    return QStringLiteral("M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07");
+    return NNA_LINE_ICON("volume");
 }
 QString Icons::moon() const {
-    return QStringLiteral("M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z");
+    return NNA_LINE_ICON("moon");
 }
 QString Icons::sun() const {
-    return QStringLiteral("M12 1v2 M12 21v2 M4.22 4.22l1.42 1.42 M18.36 18.36l1.42 1.42 M1 12h2 M21 12h2 M4.22 19.78l1.42-1.42 M18.36 5.64l1.42-1.42 M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z");
+    return NNA_LINE_ICON("sun");
 }
 QString Icons::search() const {
-    return QStringLiteral("M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35");
+    return NNA_LINE_ICON("search");
 }
 QString Icons::close() const {
-    return QStringLiteral("M18 6L6 18 M6 6l12 12");
+    return NNA_LINE_ICON("close");
 }
 QString Icons::check() const {
-    return QStringLiteral("M20 6L9 17l-5-5");
+    return NNA_LINE_ICON("check");
 }
 QString Icons::chevronRight() const {
-    return QStringLiteral("M9 18l6-6-6-6");
+    return NNA_LINE_ICON("chevron-right");
 }
 QString Icons::chevronLeft() const {
-    return QStringLiteral("M15 18l-6-6 6-6");
+    return NNA_LINE_ICON("chevron-left");
 }
 QString Icons::chevronDown() const {
-    return QStringLiteral("M6 9l6 6 6-6");
+    return NNA_LINE_ICON("chevron-down");
 }
 QString Icons::more() const {
     return QStringLiteral("M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z");
@@ -86,7 +88,7 @@ QString Icons::zap() const {
     return QStringLiteral("M13 2L3 14h9l-1 8 10-12h-9l1-8z");
 }
 QString Icons::paw() const {
-    return QStringLiteral("M8.25 9.05c1.06 0 1.92-1.08 1.92-2.42S9.31 4.21 8.25 4.21 6.33 5.29 6.33 6.63s.86 2.42 1.92 2.42z M15.75 9.05c1.06 0 1.92-1.08 1.92-2.42s-.86-2.42-1.92-2.42-1.92 1.08-1.92 2.42.86 2.42 1.92 2.42z M5.05 13.45c.99 0 1.8-.96 1.8-2.15s-.81-2.15-1.8-2.15-1.8.96-1.8 2.15.81 2.15 1.8 2.15z M18.95 13.45c.99 0 1.8-.96 1.8-2.15s-.81-2.15-1.8-2.15-1.8.96-1.8 2.15.81 2.15 1.8 2.15z M12 11.1c-2.7 0-5.45 2.46-5.45 5.05 0 1.47 1.05 2.42 2.36 2.42.95 0 1.71-.47 3.09-.47s2.14.47 3.09.47c1.31 0 2.36-.95 2.36-2.42 0-2.59-2.75-5.05-5.45-5.05z");
+    return NNA_LINE_ICON("paw");
 }
 QString Icons::satiety() const {
     return QStringLiteral("M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M8 12h8 M12 8v8");
@@ -114,4 +116,63 @@ QString Icons::sleep() const {
 }
 QString Icons::bell() const {
     return QStringLiteral("M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0");
+}
+
+// OpenNeko desktop product icons, kept on a 24x24 line grid.
+QString Icons::user() const {
+    return NNA_LINE_ICON("user");
+}
+QString Icons::users() const {
+    return QStringLiteral("M16 21v-1.2a4.8 4.8 0 0 0-4.8-4.8H6.8A4.8 4.8 0 0 0 2 19.8V21 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M22 21v-1.4a4.2 4.2 0 0 0-3.2-4.1 M16 3.2a4 4 0 0 1 0 7.6");
+}
+QString Icons::cat() const {
+    return NNA_LINE_ICON("cat");
+}
+QString Icons::monitor() const {
+    return NNA_LINE_ICON("monitor");
+}
+QString Icons::cloud() const {
+    return NNA_LINE_ICON("cloud");
+}
+QString Icons::lock() const {
+    return NNA_LINE_ICON("lock");
+}
+QString Icons::database() const {
+    return NNA_LINE_ICON("database");
+}
+QString Icons::infoCircle() const {
+    return NNA_LINE_ICON("info-circle");
+}
+QString Icons::phone() const {
+    return NNA_LINE_ICON("phone");
+}
+QString Icons::box() const {
+    return QStringLiteral("M21 8l-9-5-9 5 9 5 9-5z M3 8v8l9 5 9-5V8 M12 13v8");
+}
+QString Icons::wallet() const {
+    return NNA_LINE_ICON("wallet");
+}
+QString Icons::shieldCheck() const {
+    return NNA_LINE_ICON("shield-check");
+}
+QString Icons::keyRound() const {
+    return NNA_LINE_ICON("key-round");
+}
+QString Icons::scale() const {
+    return NNA_LINE_ICON("scale");
+}
+QString Icons::pin() const {
+    return NNA_LINE_ICON("pin");
+}
+QString Icons::cursor() const {
+    return NNA_LINE_ICON("cursor");
+}
+QString Icons::clock() const {
+    return NNA_LINE_ICON("clock");
+}
+QString Icons::refresh() const {
+    return NNA_LINE_ICON("refresh");
+}
+QString Icons::play() const {
+    return NNA_LINE_ICON("play");
 }

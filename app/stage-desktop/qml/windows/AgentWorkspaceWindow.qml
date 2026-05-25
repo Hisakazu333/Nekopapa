@@ -12,7 +12,7 @@ Window {
 
     width: 368
     height: 774
-    visible: mainWindowRef && mainWindowRef.visible && shellRef && shellRef.currentPage === 4
+    visible: false
     color: "transparent"
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     modality: Qt.NonModal

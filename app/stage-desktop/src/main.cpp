@@ -10,12 +10,16 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QScreen>
+#include <QSettings>
 #include <QSurfaceFormat>
+#include <QTimer>
 #ifdef _WIN32
 #include <Windows.h>
 #include <cstdio>
 #endif
 #include "app_controller.h"
+#include "agent_workspace_service.h"
 #include "nna_model_manager.h"
 #include "nna_avatar_canvas.h"
 #include "nna_macos_dock.h"
@@ -25,6 +29,113 @@
 #include "icons.h"
 
 using namespace Qt::StringLiterals;
+
+namespace {
+constexpr auto kMainWindowGeometryKey = "window/mainGeometry/v2";
+
+void centerWindowOnScreen(QWindow *window)
+{
+    if (!window) {
+        return;
+    }
+
+    QScreen *screen = window->screen();
+    if (!screen) {
+        screen = QGuiApplication::primaryScreen();
+    }
+    if (!screen) {
+        return;
+    }
+
+    const QRect available = screen->availableGeometry();
+    const QSize size = window->size();
+    const QPoint position(
+        available.x() + (available.width() - size.width()) / 2,
+        available.y() + (available.height() - size.height()) / 2);
+    window->setPosition(position);
+}
+
+bool isFullscreenWindow(const QWindow *window)
+{
+    return window && window->visibility() == QWindow::FullScreen;
+}
+
+bool geometryIntersectsAnyScreen(const QRect& geometry)
+{
+    if (!geometry.isValid()) {
+        return false;
+    }
+
+    const auto screens = QGuiApplication::screens();
+    for (QScreen *screen : screens) {
+        if (screen && screen->availableGeometry().intersects(geometry)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool restoreMainWindowGeometry(QWindow *window)
+{
+    if (!window) {
+        return false;
+    }
+
+    const QRect geometry = QSettings().value(QLatin1String(kMainWindowGeometryKey)).toRect();
+    if (!geometryIntersectsAnyScreen(geometry)) {
+        return false;
+    }
+
+    window->setGeometry(geometry);
+    return true;
+}
+
+void saveMainWindowGeometry(QWindow *window)
+{
+    if (!window || isFullscreenWindow(window)) {
+        return;
+    }
+
+    const QRect geometry = window->geometry();
+    if (!geometry.isValid() || geometry.width() < 980 || geometry.height() < 720) {
+        return;
+    }
+
+    QSettings settings;
+    settings.setValue(QLatin1String(kMainWindowGeometryKey), geometry);
+    settings.sync();
+}
+
+void installMainWindowGeometryPersistence(QGuiApplication& app, QWindow *window)
+{
+    if (!window) {
+        return;
+    }
+
+    auto *saveTimer = new QTimer(window);
+    saveTimer->setSingleShot(true);
+    saveTimer->setInterval(350);
+
+    QObject::connect(saveTimer, &QTimer::timeout, window, [window]() {
+        saveMainWindowGeometry(window);
+    });
+
+    const auto scheduleSave = [window, saveTimer]() {
+        if (!isFullscreenWindow(window)) {
+            saveTimer->start();
+        }
+    };
+
+    QObject::connect(window, &QWindow::xChanged, window, scheduleSave);
+    QObject::connect(window, &QWindow::yChanged, window, scheduleSave);
+    QObject::connect(window, &QWindow::widthChanged, window, scheduleSave);
+    QObject::connect(window, &QWindow::heightChanged, window, scheduleSave);
+    QObject::connect(window, &QWindow::visibilityChanged, window, scheduleSave);
+    QObject::connect(&app, &QGuiApplication::aboutToQuit, window, [window]() {
+        saveMainWindowGeometry(window);
+    });
+}
+}
 
 int main(int argc, char *argv[])
 {
@@ -67,6 +178,7 @@ int main(int argc, char *argv[])
     NNAModelManager modelManager;
     NNAAppController controller;
     controller.setModelManager(&modelManager);
+    AgentWorkspaceService agentWorkspace;
 
     QQmlApplicationEngine engine;
 
@@ -80,6 +192,7 @@ int main(int argc, char *argv[])
 
     engine.rootContext()->setContextProperty("appController", &controller);
     engine.rootContext()->setContextProperty("modelManager", &modelManager);
+    engine.rootContext()->setContextProperty("agentWorkspace", &agentWorkspace);
 
     qDebug() << "[main] Loading QML...";
     engine.load(QUrl(u"qrc:/qt/qml/OpenNeko/qml/main.qml"_s));
@@ -92,7 +205,17 @@ int main(int argc, char *argv[])
 
     if (auto *window = qobject_cast<QWindow *>(engine.rootObjects().constFirst())) {
         NNAWindowChrome::applyMainWindowChrome(window);
+        const bool restoredGeometry = restoreMainWindowGeometry(window);
+        if (!restoredGeometry) {
+            centerWindowOnScreen(window);
+        }
+        installMainWindowGeometryPersistence(app, window);
         window->show();
+        if (!restoredGeometry) {
+            QTimer::singleShot(0, window, [window]() {
+                centerWindowOnScreen(window);
+            });
+        }
     }
 
     qDebug() << "[main] Entering event loop...";

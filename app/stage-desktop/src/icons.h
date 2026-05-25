@@ -40,6 +40,25 @@ class Icons : public QObject {
     Q_PROPERTY(QString music READ music CONSTANT)
     Q_PROPERTY(QString sleep READ sleep CONSTANT)
     Q_PROPERTY(QString bell READ bell CONSTANT)
+    Q_PROPERTY(QString user READ user CONSTANT)
+    Q_PROPERTY(QString users READ users CONSTANT)
+    Q_PROPERTY(QString cat READ cat CONSTANT)
+    Q_PROPERTY(QString monitor READ monitor CONSTANT)
+    Q_PROPERTY(QString cloud READ cloud CONSTANT)
+    Q_PROPERTY(QString lock READ lock CONSTANT)
+    Q_PROPERTY(QString database READ database CONSTANT)
+    Q_PROPERTY(QString infoCircle READ infoCircle CONSTANT)
+    Q_PROPERTY(QString phone READ phone CONSTANT)
+    Q_PROPERTY(QString box READ box CONSTANT)
+    Q_PROPERTY(QString wallet READ wallet CONSTANT)
+    Q_PROPERTY(QString shieldCheck READ shieldCheck CONSTANT)
+    Q_PROPERTY(QString keyRound READ keyRound CONSTANT)
+    Q_PROPERTY(QString scale READ scale CONSTANT)
+    Q_PROPERTY(QString pin READ pin CONSTANT)
+    Q_PROPERTY(QString cursor READ cursor CONSTANT)
+    Q_PROPERTY(QString clock READ clock CONSTANT)
+    Q_PROPERTY(QString refresh READ refresh CONSTANT)
+    Q_PROPERTY(QString play READ play CONSTANT)
 
 public:
     explicit Icons(QObject* parent = nullptr);
@@ -80,4 +99,23 @@ public:
     QString music() const;
     QString sleep() const;
     QString bell() const;
+    QString user() const;
+    QString users() const;
+    QString cat() const;
+    QString monitor() const;
+    QString cloud() const;
+    QString lock() const;
+    QString database() const;
+    QString infoCircle() const;
+    QString phone() const;
+    QString box() const;
+    QString wallet() const;
+    QString shieldCheck() const;
+    QString keyRound() const;
+    QString scale() const;
+    QString pin() const;
+    QString cursor() const;
+    QString clock() const;
+    QString refresh() const;
+    QString play() const;
 };

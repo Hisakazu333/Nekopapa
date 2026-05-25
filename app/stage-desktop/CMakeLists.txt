@@ -32,6 +32,8 @@ set(DESKTOP_SOURCES
     src/main.cpp
     src/app_controller.h
     src/app_controller.cpp
+    src/agent_workspace_service.h
+    src/agent_workspace_service.cpp
     src/nna_model_manager.h
     src/nna_model_manager.cpp
     src/nna_avatar_canvas.h
@@ -64,6 +66,12 @@ qt_add_qml_module(OpenNekoEngine
         qml/core/NNABaseCard.qml
         qml/core/NNABaseInput.qml
         qml/core/NNAGlassPanel.qml
+        qml/core/NNACardPanel.qml
+        qml/core/NNASettingGroup.qml
+        qml/core/NNASettingRow.qml
+        qml/core/NNASwitch.qml
+        qml/core/NNASlider.qml
+        qml/core/NNADesktopLayoutMetrics.qml
         qml/core/ShapeIcon.qml
         qml/core/NNAAppShell.qml
         qml/windows/DesktopCompanionWindow.qml
@@ -106,6 +114,8 @@ qt_add_qml_module(OpenNekoEngine
         qml/features/ability/AbilityView.qml
         qml/features/ability/toolcall/ToolCallView.qml
         qml/features/ability/agent/AgentView.qml
+        qml/features/ability/agent/AgentState.qml
+        qml/features/ability/agent/AgentStore.qml
         qml/features/ability/evolution/EvolutionView.qml
         qml/features/world/WorldView.qml
         qml/features/world/perception/PerceptionView.qml
@@ -126,6 +136,37 @@ qt_add_qml_module(OpenNekoEngine
     RESOURCES
         qml/assets/home/home-living-room.png
         qml/assets/home/home-stage-room-cat-pillow.png
+        qml/assets/icons/line/cat.svg
+        qml/assets/icons/line/check.svg
+        qml/assets/icons/line/chevron-down.svg
+        qml/assets/icons/line/chevron-left.svg
+        qml/assets/icons/line/chevron-right.svg
+        qml/assets/icons/line/clock.svg
+        qml/assets/icons/line/close.svg
+        qml/assets/icons/line/cloud.svg
+        qml/assets/icons/line/cursor.svg
+        qml/assets/icons/line/database.svg
+        qml/assets/icons/line/home.svg
+        qml/assets/icons/line/info-circle.svg
+        qml/assets/icons/line/iot.svg
+        qml/assets/icons/line/key-round.svg
+        qml/assets/icons/line/lock.svg
+        qml/assets/icons/line/monitor.svg
+        qml/assets/icons/line/moon.svg
+        qml/assets/icons/line/paw.svg
+        qml/assets/icons/line/phone.svg
+        qml/assets/icons/line/pin.svg
+        qml/assets/icons/line/play.svg
+        qml/assets/icons/line/refresh.svg
+        qml/assets/icons/line/scale.svg
+        qml/assets/icons/line/search.svg
+        qml/assets/icons/line/send.svg
+        qml/assets/icons/line/settings.svg
+        qml/assets/icons/line/shield-check.svg
+        qml/assets/icons/line/sun.svg
+        qml/assets/icons/line/user.svg
+        qml/assets/icons/line/volume.svg
+        qml/assets/icons/line/wallet.svg
 )
 
 # macOS 26+ SDK removed AGL.framework tbd stub
@@ -147,9 +188,6 @@ target_link_libraries(OpenNekoEngine PRIVATE
 
 if(NNA_HAS_CORE_NANO AND TARGET nekocore_nano)
     target_link_libraries(OpenNekoEngine PRIVATE nekocore_nano)
-    target_include_directories(OpenNekoEngine PRIVATE
-        "${NNA_CORE_NANO_SOURCE_DIR}/include"
-    )
     target_compile_definitions(OpenNekoEngine PRIVATE NNA_HAS_CORE_NANO=1)
 else()
     target_compile_definitions(OpenNekoEngine PRIVATE NNA_HAS_CORE_NANO=0)
