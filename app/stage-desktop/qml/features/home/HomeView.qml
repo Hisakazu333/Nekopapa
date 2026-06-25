@@ -381,7 +381,7 @@ Item {
                     titleText: "\u53BB\u5BF9\u8BDD"
                     subtitleText: "\u5207\u5230\u7EAF\u804A\u5929\u89C6\u56FE"
                     accentColor: Theme.color("accent.base")
-                    onTriggered: root.switchToPage(1)
+                    onTriggered: root.openChat()
                 }
 
                 ActionRow {
@@ -389,7 +389,7 @@ Item {
                     titleText: "\u67E5\u8BB0\u5FC6"
                     subtitleText: "\u770B\u5173\u7CFB\u548C\u4E8B\u4EF6\u8F68\u8FF9"
                     accentColor: Theme.color("state.warning")
-                    onTriggered: root.switchToPage(2)
+                    onTriggered: root.openMineSection("memory")
                 }
 
                 ActionRow {
@@ -397,7 +397,7 @@ Item {
                     titleText: "\u540C\u6B65\u8BBE\u7F6E"
                     subtitleText: "\u8FDE\u63A5\u624B\u673A\u548C\u540E\u7AEF"
                     accentColor: Theme.color("state.success")
-                    onTriggered: root.switchToPage(5)
+                    onTriggered: root.openMineSection("overview")
                 }
             }
         }
@@ -749,9 +749,14 @@ Item {
         }
     }
 
-    function switchToPage(index) {
+    function openChat() {
         if (shellRef)
-            shellRef.currentPage = index
+            shellRef.openOverlay(0)
+    }
+
+    function openMineSection(sectionId) {
+        if (shellRef)
+            shellRef.openMineSection(sectionId)
     }
 
     function latestCompanionText() {

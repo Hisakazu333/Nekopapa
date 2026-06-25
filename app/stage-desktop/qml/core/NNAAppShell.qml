@@ -8,6 +8,7 @@ Item {
     id: shell
 
     property int currentPage: 0
+    property int overlayPanel: -1
     property string agentMode: "ide"
     readonly property real designWidth: 735
     readonly property real designHeight: 944
@@ -28,23 +29,19 @@ Item {
     readonly property real layoutWidth: mix(width, designWidth, shapeCompactProgress)
     readonly property real layoutHeight: mix(height, designHeight, compactProgress)
     readonly property real layoutScale: mix(1.0, compactScale, compactProgress)
-    readonly property real dockWidth: desktopLayout.dockWidth
-    readonly property real dockHeight: desktopLayout.dockHeight
-    readonly property real dockBottomMargin: desktopLayout.dockBottomMargin
-    readonly property real dockRadius: desktopLayout.dockRadius
-    readonly property real dockClearance: desktopLayout.dockClearance
-    readonly property real dockItemScale: Math.max(0.92, Math.min(1.08, dockHeight / 62))
+    readonly property real shellRailWidth: desktopLayout.shellRailWidth
+    readonly property real contentBottomInset: desktopLayout.contentBottomInset
+
+    property bool settingsPanelOpen: false
 
     readonly property var navItems: [
-        { label: "\u966A\u4F34", icon: Icons.paw, paw: true },
-        { label: "\u5BF9\u8BDD", icon: Icons.chat },
-        { label: "\u8BB0\u5FC6", icon: Icons.memory },
-        { label: "\u4E16\u754C", icon: Icons.world },
+        { label: "\u9996\u9875", icon: Icons.home },
         { label: "Agent", icon: Icons.ability },
         { label: "\u6211\u7684", icon: Icons.character }
     ]
 
-    readonly property bool overlayPanelOpen: currentPage !== 0 && currentPage !== 1 && currentPage !== 4 && currentPage !== 5
+    readonly property bool chatOpen: overlayPanel === 0
+    readonly property bool sideOverlayOpen: overlayPanel === 1 || overlayPanel === 2
 
     NNADesktopLayoutMetrics {
         id: desktopLayout
@@ -59,24 +56,28 @@ Item {
     }
 
     Item {
+        id: contentStage
+        anchors.fill: parent
+
+    Item {
         id: homeStage
         anchors.fill: parent
-        visible: shell.currentPage !== 1 && shell.currentPage !== 4 && shell.currentPage !== 5
+        visible: shell.currentPage === 0 && !shell.chatOpen
         clip: true
 
         HomeView {
             id: homeView
             anchors.fill: parent
             shellRef: shell
-            dockClearance: shell.dockClearance
+            dockClearance: shell.contentBottomInset
         }
     }
 
     ChatView {
         id: chatView
         anchors.fill: parent
-        dockClearance: shell.dockClearance
-        visible: shell.currentPage === 1
+        dockClearance: shell.contentBottomInset
+        visible: shell.chatOpen
         opacity: visible ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -85,11 +86,12 @@ Item {
     NNAMineView {
         id: mineView
         anchors.fill: parent
-        dockClearance: shell.dockClearance
-        desktopSidebarWidth: desktopLayout.sidebarWidth
+        shellRef: shell
+        dockClearance: shell.contentBottomInset
+        desktopSidebarWidth: 0
         desktopContentWidth: desktopLayout.contentWidth
         desktopContentGutter: desktopLayout.contentGutter
-        visible: shell.currentPage === 5
+        visible: shell.currentPage === 2
         opacity: visible ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -98,40 +100,41 @@ Item {
     AgentView {
         id: agentView
         anchors.fill: parent
-        dockClearance: shell.dockClearance
+        dockClearance: shell.contentBottomInset
         shellRef: shell
         mode: shell.agentMode
-        visible: shell.currentPage === 4
+        visible: shell.currentPage === 1
         opacity: visible ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: 180 } }
     }
+    }
 
     Rectangle {
         anchors.fill: parent
-        visible: overlayPanelOpen
+        visible: sideOverlayOpen
         color: Theme.alpha("overlay.scrim", Theme.isDark ? 0.32 : 0.12)
-        opacity: overlayPanelOpen ? 1 : 0
+        opacity: sideOverlayOpen ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: 180 } }
 
         MouseArea {
             anchors.fill: parent
-            onClicked: shell.currentPage = 0
+            onClicked: shell.closeOverlay()
         }
     }
 
     Rectangle {
         id: workspacePanel
-        width: panelWidth(shell.currentPage)
+        width: panelWidth(shell.overlayPanel)
         height: parent.height - 128
-        x: overlayPanelOpen ? parent.width - width - 28 : parent.width + 40
+        x: sideOverlayOpen ? parent.width - width - 28 : parent.width + 40
         y: 34
         radius: 34
         color: Theme.alpha("surface.base", Theme.isDark ? 0.96 : 0.95)
         border.color: Theme.alpha("line.soft", 0.80)
         border.width: 1
-        opacity: overlayPanelOpen ? 1 : 0
+        opacity: sideOverlayOpen ? 1 : 0
         visible: opacity > 0
         clip: true
 
@@ -158,7 +161,7 @@ Item {
 
                 Text {
                     Layout.fillWidth: true
-                    text: panelTitle(shell.currentPage)
+                    text: panelTitle(shell.overlayPanel)
                     font.pixelSize: 24
                     font.family: Theme.fontUi
                     font.weight: Font.Black
@@ -183,7 +186,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: shell.currentPage = 0
+                        onClicked: shell.closeOverlay()
                     }
                 }
             }
@@ -199,9 +202,8 @@ Item {
 
                 StackLayout {
                     anchors.fill: parent
-                    currentIndex: panelIndex(shell.currentPage)
+                    currentIndex: panelIndex(shell.overlayPanel)
 
-                    ChatView {}
                     SoulView {}
                     WorldView {}
                 }
@@ -210,226 +212,143 @@ Item {
     }
 
     Item {
-        id: dockStage
-        z: 999
         anchors.fill: parent
+        visible: settingsPanelOpen
+        z: 1200
 
-        Item {
-            id: dockFrame
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.alpha("overlay.scrim", Theme.isDark ? 0.36 : 0.14)
 
-            width: shell.dockWidth
-            height: shell.dockHeight
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: shell.dockBottomMargin
-
-            NNAMacOSDockView {
-                id: nativeDock
+            MouseArea {
                 anchors.fill: parent
-                currentPage: shell.currentPage
-                radius: shell.dockRadius
-                dark: Theme.isDark
-                property real frameSyncKey: shell.width
-                    + shell.height
-                    + dockStage.x
-                    + dockStage.y
-                    + dockStage.width
-                    + dockStage.height
-                    + dockFrame.x
-                    + dockFrame.y
-                    + dockFrame.width
-                    + dockFrame.height
-                    + dockFrame.anchors.bottomMargin
-                onFrameSyncKeyChanged: refreshNativeFrame()
-                onPageRequested: function(page) { shell.currentPage = page }
-                onMenuActionRequested: function(page, action) { shell.handleDockMenuAction(page, action) }
-            }
-
-            Item {
-                id: dock
-                anchors.fill: parent
-                visible: !nativeDock.nativeActive
-                opacity: 1.0
-
-                Behavior on opacity { NumberAnimation { duration: 160 } }
-
-                NNAGlassPanel {
-                    anchors.fill: parent
-                    radius: nativeDock.radius
-                    topLineMargin: 22 * shell.dockItemScale
-                    shadowOffset: 7 * shell.dockItemScale
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 8 * shell.dockItemScale
-                    anchors.rightMargin: 8 * shell.dockItemScale
-                    anchors.topMargin: 6 * shell.dockItemScale
-                    anchors.bottomMargin: 6 * shell.dockItemScale
-                    spacing: 5 * shell.dockItemScale
-
-                    Repeater {
-                        model: shell.navItems
-
-                        delegate: Item {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-
-                            readonly property bool active: shell.currentPage === index
-
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 7 * shell.dockItemScale
-
-                                Item {
-                                    id: iconSlot
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: 44 * shell.dockItemScale
-                                    height: 32 * shell.dockItemScale
-
-                                    Rectangle {
-                                        anchors.centerIn: parent
-                                        width: dockMouse.pressed ? 46 * shell.dockItemScale : 42 * shell.dockItemScale
-                                        height: 32 * shell.dockItemScale
-                                        radius: height / 2
-                                        color: active
-                                            ? Theme.alpha("accent.soft", Theme.isDark ? 0.30 : 0.72)
-                                            : dockMouse.containsMouse
-                                                ? Theme.alpha("surface.sunken", Theme.isDark ? 0.20 : 0.34)
-                                                : "transparent"
-                                        border.color: "transparent"
-                                        border.width: 0
-
-                                        Behavior on color { ColorAnimation { duration: 140 } }
-                                        Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                                    }
-
-                                    PawNavIcon {
-                                        anchors.centerIn: parent
-                                        visible: modelData.paw === true
-                                        size: (active ? 27 : 25) * shell.dockItemScale
-                                        active: parent.parent.parent.active
-                                        iconColor: active ? Theme.color("accent.base") : Theme.color("text.secondary")
-                                    }
-
-                                    ShapeIcon {
-                                        anchors.centerIn: parent
-                                        visible: modelData.paw !== true
-                                        pathData: modelData.icon
-                                        size: (active ? 27 : 25) * shell.dockItemScale
-                                        strokeWidth: active ? 1.72 : 1.62
-                                        iconColor: active ? Theme.color("accent.base") : Theme.color("text.secondary")
-                                    }
-                                }
-
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: modelData.label
-                                    font.pixelSize: 12 * shell.dockItemScale
-                                    font.family: Theme.fontUi
-                                    font.weight: active ? Font.DemiBold : Font.Medium
-                                    renderType: Text.NativeRendering
-                                    color: active ? Theme.color("accent.strong") : Theme.color("text.secondary")
-                                }
-                            }
-
-                            MouseArea {
-                                id: dockMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: shell.currentPage = index
-                            }
-                        }
-                    }
-                }
+                onClicked: shell.closeSettings()
             }
         }
-    }
 
-    component PawNavIcon: Item {
-        id: pawIcon
-        property real size: 24
-        property color iconColor: Theme.color("text.secondary")
-        property bool active: false
-
-        width: size
-        height: size
-
-        Item {
-            id: pawCanvas
-            width: 24
-            height: 24
+        Rectangle {
+            width: Math.min(parent.width - 56, 920)
+            height: parent.height - 72
             anchors.centerIn: parent
-            scale: pawIcon.size / 24
-            transformOrigin: Item.Center
+            radius: 14
+            color: Theme.color("bg.canvas")
+            border.color: Theme.color("apple.hairline")
+            border.width: 1
+            clip: true
 
-            Repeater {
-                model: [
-                    { x: 3.9, y: 7.3, w: 4.2, h: 5.9, r: -22 },
-                    { x: 7.7, y: 3.8, w: 4.1, h: 6.5, r: -8 },
-                    { x: 12.2, y: 3.8, w: 4.1, h: 6.5, r: 8 },
-                    { x: 15.9, y: 7.3, w: 4.2, h: 5.9, r: 22 }
-                ]
-
-                Rectangle {
-                    x: modelData.x
-                    y: modelData.y
-                    width: modelData.w
-                    height: modelData.h
-                    radius: Math.min(width, height) / 2
-                    rotation: modelData.r
-                    color: pawIcon.active ? pawIcon.iconColor : "transparent"
-                    border.color: pawIcon.iconColor
-                    border.width: pawIcon.active ? 0 : 1.8
-                    antialiasing: true
-                }
-            }
-
-            Shape {
+            MouseArea {
                 anchors.fill: parent
-                antialiasing: true
+                propagateComposedEvents: true
+                onPressed: function(mouse) { mouse.accepted = false }
+            }
 
-                ShapePath {
-                    strokeWidth: pawIcon.active ? 0 : 1.8
-                    strokeColor: pawIcon.iconColor
-                    fillColor: pawIcon.active ? pawIcon.iconColor : "transparent"
-                    capStyle: ShapePath.RoundCap
-                    joinStyle: ShapePath.RoundJoin
+            SettingsView {
+                id: engineSettingsPanel
+                anchors.fill: parent
+            }
 
-                    PathSvg {
-                        path: "M12 12.1c-2.85 0-5.35 2.4-5.35 5.02 0 1.56 1.05 2.55 2.42 2.55.9 0 1.72-.48 2.93-.48s2.03.48 2.93.48c1.37 0 2.42-.99 2.42-2.55 0-2.62-2.5-5.02-5.35-5.02z"
-                    }
+            Rectangle {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 12
+                width: 32
+                height: 32
+                radius: 16
+                color: closeSettingsMouse.containsMouse
+                    ? Theme.color("apple.selection")
+                    : "transparent"
+
+                ShapeIcon {
+                    anchors.centerIn: parent
+                    pathData: Icons.close
+                    size: 14
+                    iconColor: Theme.color("apple.secondary")
+                }
+
+                MouseArea {
+                    id: closeSettingsMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: shell.closeSettings()
                 }
             }
         }
     }
 
-    function panelIndex(page) {
+    function navMenuItems(page) {
         switch (page) {
-        case 1: return 0
-        case 2: return 1
-        case 3: return 2
-        default: return 0
+        case 0:
+            return [
+                { label: "\u6253\u5F00\u9996\u9875", action: 0 },
+                { label: "\u684C\u5BA0\u5F00\u5173", action: 1 },
+                { label: "\u6A21\u578B\u7BA1\u7406", action: 2 },
+                { label: "\u59FF\u6001\u6821\u51C6", action: 3 }
+            ]
+        case 1:
+            return [
+                { label: "\u6253\u5F00 Agent", action: 0 },
+                { label: "\u5DE5\u5177\u4E2D\u5FC3", action: 1 },
+                { label: "\u8FD0\u884C\u65E5\u5FD7", action: 2 },
+                { label: "\u81EA\u52A8\u5316\u4EFB\u52A1", action: 3 }
+            ]
+        case 2:
+            return [
+                { label: "\u6253\u5F00\u6211\u7684\u9875", action: 0 },
+                { label: "\u8D26\u53F7\u540C\u6B65", action: 1 },
+                { label: "\u8BBE\u7F6E\u4E2D\u5FC3", action: 2 },
+                { label: "\u9690\u79C1\u4E0E\u6570\u636E", action: 3 }
+            ]
+        default:
+            return []
         }
     }
 
-    function panelTitle(page) {
-        switch (page) {
-        case 1: return "\u5BF9\u8BDD"
-        case 2: return "\u8BB0\u5FC6"
-        case 3: return "\u4E16\u754C"
-        case 5: return "\u6211\u7684"
-        default: return "\u966A\u4F34"
+    function panelIndex(panel) {
+        return panel === 2 ? 1 : 0
+    }
+
+    function panelTitle(panel) {
+        switch (panel) {
+        case 1: return "\u8BB0\u5FC6"
+        case 2: return "\u4E16\u754C"
+        default: return "\u8BB0\u5FC6"
         }
     }
 
-    function panelWidth(page) {
-        if (page === 1)
+    function panelWidth(panel) {
+        if (panel === 1)
             return Math.min(width * 0.42, 560)
-        if (page === 5)
-            return Math.min(width * 0.60, 880)
         return Math.min(width * 0.52, 720)
+    }
+
+    function openOverlay(panel) {
+        overlayPanel = panel
+    }
+
+    function closeOverlay() {
+        overlayPanel = -1
+    }
+
+    function openMineSection(sectionId) {
+        closeOverlay()
+        currentPage = 2
+        Qt.callLater(function() {
+            if (mineView)
+                mineView.scrollToMineSection(sectionId)
+        })
+    }
+
+    function openSettings(categoryIndex) {
+        settingsPanelOpen = true
+        Qt.callLater(function() {
+            if (engineSettingsPanel)
+                engineSettingsPanel.openCategory(categoryIndex)
+        })
+    }
+
+    function closeSettings() {
+        settingsPanelOpen = false
     }
 
     function clamp01(value) {
@@ -449,7 +368,8 @@ Item {
         switch (page) {
         case 0:
             if (action === 0) {
-                shell.currentPage = 0
+                closeOverlay()
+                currentPage = 0
             } else if (action === 1) {
                 appController.desktopCompanionEnabled = !appController.desktopCompanionEnabled
             } else if (action === 2 || action === 3) {
@@ -457,32 +377,23 @@ Item {
             }
             break
         case 1:
-            if (action === 0)
-                shell.currentPage = 1
+            if (action === 0) {
+                closeOverlay()
+                currentPage = 1
+            }
             break
         case 2:
-            if (action === 0)
-                shell.currentPage = 2
-            break
-        case 3:
-            if (action === 0)
-                shell.currentPage = 3
-            break
-        case 4:
-            if (action === 0)
-                shell.currentPage = 4
-            break
-        case 5:
             if (action === 0) {
-                shell.currentPage = 5
+                openMineSection("overview")
             } else if (action === 1) {
                 if (appController.accountLoggedIn)
                     mineView.refreshProfile()
                 else
                     mineView.openLoginDialog()
-            } else if (action === 2 || action === 3) {
-                shell.currentPage = 5
-                mineView.scrollToSettings()
+            } else if (action === 2) {
+                openSettings(0)
+            } else if (action === 3) {
+                openMineSection("privacy")
             }
             break
         default:

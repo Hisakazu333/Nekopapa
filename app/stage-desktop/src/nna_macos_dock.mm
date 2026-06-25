@@ -93,7 +93,7 @@ NSRect selectorFallbackFrameForPage(NSRect bounds, NSInteger page)
     static constexpr CGFloat edgeX = 10.0;
     static constexpr CGFloat edgeY = 6.0;
     static constexpr CGFloat spacing = 8.0;
-    static constexpr NSInteger itemCount = 6;
+    static constexpr NSInteger itemCount = 3;
 
     const CGFloat availableWidth = MAX(1.0, bounds.size.width - edgeX * 2.0 - spacing * (itemCount - 1));
     const CGFloat itemWidth = availableWidth / itemCount;
@@ -180,28 +180,22 @@ NSAttributedString *dockTitle(NSString *title, NSColor *color, bool active)
 
 NSArray<NSString *> *dockTitles()
 {
-    return @[@"陪伴", @"对话", @"记忆", @"世界", @"Agent", @"我的"];
+    return @[@"首页", @"Agent", @"我的"];
 }
 
 NSArray<NSString *> *dockSymbols()
 {
-    return @[@"pawprint", @"bubble.left", @"star", @"globe", @"bolt", @"person"];
+    return @[@"house", @"bolt", @"person"];
 }
 
 NSArray<NSString *> *dockMenuItems(NSInteger page)
 {
     switch (page) {
     case 0:
-        return @[@"打开陪伴页", @"桌宠开关", @"模型管理", @"姿态校准"];
+        return @[@"打开首页", @"桌宠开关", @"模型管理", @"姿态校准"];
     case 1:
-        return @[@"打开对话页", @"新对话", @"历史记录", @"语音模式"];
-    case 2:
-        return @[@"打开记忆页", @"记忆时间线", @"搜索记忆", @"记忆设置"];
-    case 3:
-        return @[@"打开世界页", @"小屋", @"世界状态", @"外出计划"];
-    case 4:
         return @[@"打开 Agent", @"工具中心", @"运行日志", @"自动化任务"];
-    case 5:
+    case 2:
         return @[@"打开我的页", @"账号同步", @"设置中心", @"隐私与数据"];
     default:
         return @[@"打开"];
@@ -215,16 +209,10 @@ NSString *dockMenuSymbol(NSInteger page, NSInteger item)
 
     switch (page) {
     case 0:
-        return @[@"pawprint", @"power", @"cpu", @"viewfinder"][MAX(0, MIN(3, item))];
+        return @[@"house", @"power", @"cpu", @"viewfinder"][MAX(0, MIN(3, item))];
     case 1:
-        return @[@"bubble.left", @"plus.bubble", @"clock", @"waveform"][MAX(0, MIN(3, item))];
-    case 2:
-        return @[@"star", @"timeline.selection", @"magnifyingglass", @"gearshape"][MAX(0, MIN(3, item))];
-    case 3:
-        return @[@"globe", @"house", @"chart.line.uptrend.xyaxis", @"figure.walk"][MAX(0, MIN(3, item))];
-    case 4:
         return @[@"bolt", @"wrench.and.screwdriver", @"list.bullet.rectangle", @"sparkles"][MAX(0, MIN(3, item))];
-    case 5:
+    case 2:
         return @[@"person", @"arrow.triangle.2.circlepath", @"gearshape", @"lock.shield"][MAX(0, MIN(3, item))];
     default:
         return @"arrow.right";

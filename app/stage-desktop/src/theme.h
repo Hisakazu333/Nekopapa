@@ -14,6 +14,10 @@ class Theme : public QObject {
     Q_PROPERTY(int radiusMd READ radiusMd CONSTANT)
     Q_PROPERTY(int radiusLg READ radiusLg CONSTANT)
     Q_PROPERTY(int radiusXl READ radiusXl CONSTANT)
+    Q_PROPERTY(int appleRadiusGroup READ appleRadiusGroup CONSTANT)
+    Q_PROPERTY(int appleRadiusButton READ appleRadiusButton CONSTANT)
+    Q_PROPERTY(int appleSidebarWidth READ appleSidebarWidth CONSTANT)
+    Q_PROPERTY(int appleContentMaxWidth READ appleContentMaxWidth CONSTANT)
 
 public:
     explicit Theme(QObject* parent = nullptr);
@@ -35,6 +39,10 @@ public:
     int radiusMd() const { return 16; }
     int radiusLg() const { return 24; }
     int radiusXl() const { return 32; }
+    int appleRadiusGroup() const { return 10; }
+    int appleRadiusButton() const { return 8; }
+    int appleSidebarWidth() const { return 260; }
+    int appleContentMaxWidth() const { return 720; }
 
 signals:
     void modeChanged();

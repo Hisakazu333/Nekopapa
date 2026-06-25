@@ -7,8 +7,11 @@
 
 #pragma once
 
+#include <QtGlobal>
+
 class QWindow;
 
 namespace NNAWindowChrome {
 void applyMainWindowChrome(QWindow *window);
+qreal trafficLightsLeadingMargin(QWindow *window);
 }

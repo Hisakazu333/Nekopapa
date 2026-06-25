@@ -5,13 +5,13 @@ import QtQuick.Window
 
 ApplicationWindow {
     id: root
-    readonly property int targetStageWidth: 1440
+    readonly property int targetStageWidth: 735
     readonly property int targetStageHeight: 944
 
     width: targetStageWidth
     height: targetStageHeight + 38
-    minimumWidth: 980
-    minimumHeight: 720
+    minimumWidth: 680
+    minimumHeight: 820
     visible: false
     title: "OpenNeko Engine"
     flags: Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint
@@ -20,6 +20,13 @@ ApplicationWindow {
     leftPadding: 0
     rightPadding: 0
     bottomPadding: 0
+
+    readonly property bool isMacDesktop: Qt.platform.os === "osx"
+        || Qt.platform.os === "macos"
+        || Qt.platform.os === "darwin"
+    readonly property real chromeLeadingInset: isMacDesktop
+        ? Math.max(80, (typeof windowChromeLeadingInset !== "undefined" ? windowChromeLeadingInset : 0) + 6)
+        : 16
 
     readonly property string helpIcon: "M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3 M12 17h.01 M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"
     readonly property string syncIcon: "M21 12a9 9 0 0 1-15.5 6.2 M3 12A9 9 0 0 1 18.5 5.8 M18 3v4h-4 M6 21v-4h4"
@@ -33,12 +40,6 @@ ApplicationWindow {
         z: 50
         color: Theme.alpha("surface.float", Theme.isDark ? 0.86 : 0.82)
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton
-            onPressed: root.startSystemMove()
-        }
-
         Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
@@ -47,54 +48,89 @@ ApplicationWindow {
             color: Theme.alpha("line.soft", Theme.isDark ? 0.60 : 0.72)
         }
 
-        Text {
-            anchors.centerIn: parent
-            text: "OpenNeko Engine"
-            font.pixelSize: 13
-            font.family: Theme.fontUi
-            font.weight: Font.Medium
-            color: Theme.color("text.secondary")
-        }
-
         RowLayout {
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 14
-            spacing: 11
+            anchors.fill: parent
+            spacing: 0
 
-            ChromeIconButton {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
-                iconPath: root.helpIcon
+            Item {
+                Layout.preferredWidth: root.chromeLeadingInset
+                Layout.fillHeight: true
             }
 
-            ChromeIconButton {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
-                iconPath: root.syncIcon
-                onTriggered: {
-                    if (appController.accountLoggedIn)
-                        appController.refreshAccountProfile()
+            Text {
+                visible: !root.isMacDesktop
+                Layout.alignment: Qt.AlignVCenter
+                text: "OpenNeko"
+                font.pixelSize: 12
+                font.family: Theme.fontUi
+                font.weight: Font.DemiBold
+                color: Theme.color("text.tertiary")
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                NNAAppNavSegment {
+                    anchors.centerIn: parent
+                    currentPage: shell.currentPage
+                    onPageRequested: function(page) {
+                        shell.closeOverlay()
+                        shell.currentPage = page
+                    }
                 }
             }
 
-            ChromeIconButton {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
-                iconPath: Icons.settings
-                onTriggered: shell.currentPage = 5
-            }
+            RowLayout {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.rightMargin: 14
+                spacing: 11
 
-            ChromeModeSwitch {
-                Layout.preferredWidth: 94
-                Layout.preferredHeight: 26
-                visible: shell.currentPage === 4
-            }
+                ChromeIconButton {
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                    iconPath: root.helpIcon
+                }
 
-            ChromeAvatar {
-                Layout.preferredWidth: 30
-                Layout.preferredHeight: 30
+                ChromeIconButton {
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                    iconPath: root.syncIcon
+                    onTriggered: {
+                        if (appController.accountLoggedIn)
+                            appController.refreshAccountProfile()
+                    }
+                }
+
+                ChromeIconButton {
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                    iconPath: Icons.settings
+                    onTriggered: shell.openSettings(0)
+                }
+
+                ChromeModeSwitch {
+                    Layout.preferredWidth: 94
+                    Layout.preferredHeight: 26
+                    visible: shell.currentPage === 1
+                }
+
+                ChromeAvatar {
+                    Layout.preferredWidth: 30
+                    Layout.preferredHeight: 30
+                }
             }
+        }
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.leftMargin: root.chromeLeadingInset
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            acceptedButtons: Qt.LeftButton
+            z: -1
+            onPressed: root.startSystemMove()
         }
     }
 
@@ -175,7 +211,7 @@ ApplicationWindow {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: shell.currentPage = 5
+            onClicked: shell.openMineSection("overview")
         }
     }
 

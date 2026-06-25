@@ -73,6 +73,16 @@ QHash<QString, QColor> Theme::palette(int mode) const {
         p[QStringLiteral("state.danger")] = QColor(QStringLiteral("#C94A4A"));
         p[QStringLiteral("info")] = QColor(QStringLiteral("#3E6EA8"));
         p[QStringLiteral("overlay.scrim")] = QColor(QStringLiteral("#0F141C"));
+        p[QStringLiteral("apple.canvas")] = QColor(QStringLiteral("#F5F5F7"));
+        p[QStringLiteral("apple.sidebar")] = QColor(QStringLiteral("#EBEBED"));
+        p[QStringLiteral("apple.grouped")] = QColor(QStringLiteral("#FFFFFF"));
+        p[QStringLiteral("apple.hairline")] = QColor(QStringLiteral("#D2D2D7"));
+        p[QStringLiteral("apple.ink")] = QColor(QStringLiteral("#1D1D1F"));
+        p[QStringLiteral("apple.secondary")] = QColor(QStringLiteral("#6E6E73"));
+        p[QStringLiteral("apple.tertiary")] = QColor(QStringLiteral("#86868B"));
+        p[QStringLiteral("apple.action")] = QColor(QStringLiteral("#007AFF"));
+        p[QStringLiteral("apple.actionHover")] = QColor(QStringLiteral("#0066CC"));
+        p[QStringLiteral("apple.selection")] = QColor(QStringLiteral("#E8E8ED"));
     } else if (mode == 1) {
         p[QStringLiteral("bg.canvas")] = QColor(QStringLiteral("#F7F7F5"));
         p[QStringLiteral("bg.sidebar")] = QColor(QStringLiteral("#F1F0ED"));
@@ -94,6 +104,16 @@ QHash<QString, QColor> Theme::palette(int mode) const {
         p[QStringLiteral("state.danger")] = QColor(QStringLiteral("#C94A4A"));
         p[QStringLiteral("info")] = QColor(QStringLiteral("#3E6EA8"));
         p[QStringLiteral("overlay.scrim")] = QColor(QStringLiteral("#0F141C"));
+        p[QStringLiteral("apple.canvas")] = QColor(QStringLiteral("#F5F5F7"));
+        p[QStringLiteral("apple.sidebar")] = QColor(QStringLiteral("#EBEBED"));
+        p[QStringLiteral("apple.grouped")] = QColor(QStringLiteral("#FFFFFF"));
+        p[QStringLiteral("apple.hairline")] = QColor(QStringLiteral("#D2D2D7"));
+        p[QStringLiteral("apple.ink")] = QColor(QStringLiteral("#1D1D1F"));
+        p[QStringLiteral("apple.secondary")] = QColor(QStringLiteral("#6E6E73"));
+        p[QStringLiteral("apple.tertiary")] = QColor(QStringLiteral("#86868B"));
+        p[QStringLiteral("apple.action")] = QColor(QStringLiteral("#007AFF"));
+        p[QStringLiteral("apple.actionHover")] = QColor(QStringLiteral("#0066CC"));
+        p[QStringLiteral("apple.selection")] = QColor(QStringLiteral("#E8E8ED"));
     } else {
         p[QStringLiteral("bg.canvas")] = QColor(QStringLiteral("#0B0B0D"));
         p[QStringLiteral("bg.sidebar")] = QColor(QStringLiteral("#131316"));
@@ -115,6 +135,16 @@ QHash<QString, QColor> Theme::palette(int mode) const {
         p[QStringLiteral("state.danger")] = QColor(QStringLiteral("#EA6E75"));
         p[QStringLiteral("info")] = QColor(QStringLiteral("#74B9F0"));
         p[QStringLiteral("overlay.scrim")] = QColor(QStringLiteral("#000000"));
+        p[QStringLiteral("apple.canvas")] = QColor(QStringLiteral("#1C1C1E"));
+        p[QStringLiteral("apple.sidebar")] = QColor(QStringLiteral("#161618"));
+        p[QStringLiteral("apple.grouped")] = QColor(QStringLiteral("#2C2C2E"));
+        p[QStringLiteral("apple.hairline")] = QColor(QStringLiteral("#3A3A3C"));
+        p[QStringLiteral("apple.ink")] = QColor(QStringLiteral("#F5F5F7"));
+        p[QStringLiteral("apple.secondary")] = QColor(QStringLiteral("#AEAEB2"));
+        p[QStringLiteral("apple.tertiary")] = QColor(QStringLiteral("#8E8E93"));
+        p[QStringLiteral("apple.action")] = QColor(QStringLiteral("#0A84FF"));
+        p[QStringLiteral("apple.actionHover")] = QColor(QStringLiteral("#409CFF"));
+        p[QStringLiteral("apple.selection")] = QColor(QStringLiteral("#3A3A3C"));
     }
     return p;
 }

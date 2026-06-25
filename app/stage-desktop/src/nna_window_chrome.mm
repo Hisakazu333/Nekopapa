@@ -52,4 +52,36 @@ void applyMainWindowChrome(QWindow *window)
 #endif
 }
 
+qreal trafficLightsLeadingMargin(QWindow *window)
+{
+    NSWindow *nativeWindow = nativeWindowFor(window);
+    if (!nativeWindow)
+        return 80;
+
+    NSView *contentView = nativeWindow.contentView;
+    if (!contentView)
+        return 80;
+
+    const NSWindowButton buttonTypes[] = {
+        NSWindowCloseButton,
+        NSWindowMiniaturizeButton,
+        NSWindowZoomButton
+    };
+
+    CGFloat maxX = 0;
+    for (NSWindowButton buttonType : buttonTypes) {
+        NSButton *button = [nativeWindow standardWindowButton:buttonType];
+        if (!button || !button.superview)
+            continue;
+
+        const NSRect frame = [button.superview convertRect:button.frame toView:contentView];
+        maxX = MAX(maxX, NSMaxX(frame));
+    }
+
+    if (maxX <= 0)
+        return 80;
+
+    return maxX + 12.0;
+}
+
 } // namespace NNAWindowChrome

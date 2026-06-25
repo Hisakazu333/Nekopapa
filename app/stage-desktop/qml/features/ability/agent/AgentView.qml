@@ -291,21 +291,21 @@ Item {
                     Layout.fillWidth: true
                     label: "记忆"
                     iconPath: Icons.memory
-                    onClicked: if (root.shellRef) root.shellRef.currentPage = 2
+                    onClicked: if (root.shellRef) root.shellRef.openMineSection("memory")
                 }
 
                 NavButton {
                     Layout.fillWidth: true
                     label: "状态"
                     iconPath: Icons.status
-                    onClicked: if (root.shellRef) root.shellRef.currentPage = 5
+                    onClicked: if (root.shellRef) root.shellRef.openMineSection("overview")
                 }
 
                 NavButton {
                     Layout.fillWidth: true
                     label: "设置"
                     iconPath: Icons.settings
-                    onClicked: if (root.shellRef) root.shellRef.currentPage = 5
+                    onClicked: if (root.shellRef) root.shellRef.openMineSection("overview")
                 }
             }
         }

@@ -14,4 +14,10 @@ void applyMainWindowChrome(QWindow *window)
     (void)window;
 }
 
+qreal trafficLightsLeadingMargin(QWindow *window)
+{
+    (void)window;
+    return 0;
+}
+
 } // namespace NNAWindowChrome

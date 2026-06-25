@@ -2,15 +2,18 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import NNA.Core 1.0
 
 Item {
     id: root
 
+    property var shellRef: null
     property real dockClearance: 0
-    property real desktopSidebarWidth: Math.round(Math.min(336, Math.max(width < 980 ? 236 : 260, width * 0.20)))
-    property real desktopContentGutter: width < 1120 ? 24 : 38
-    property real desktopContentWidth: Math.round(Math.min(Math.max(1, width - desktopSidebarWidth - 1 - desktopContentGutter * 2), 1168))
+    readonly property real iconRailWidth: 0
+    property real desktopSidebarWidth: 0
+    property real desktopContentGutter: width < 1120 ? 20 : 28
+    property real desktopContentWidth: Math.round(Math.min(Math.max(1, width - desktopContentGutter * 2), Theme.appleContentMaxWidth))
     property string activeMineSection: "overview"
     property real desktopModelScale: 1.20
     property bool desktopAlwaysOnTop: false
@@ -22,11 +25,11 @@ Item {
     readonly property string accountSubtitle: loggedIn
         ? (appController.accountUserId > 0 ? ("UID " + appController.accountUserId) : "账号已登录")
         : "本地模式"
-    readonly property color pageMaterial: Theme.color("bg.canvas")
-    readonly property color sidebarMaterial: Theme.color("bg.sidebar")
-    readonly property color contentMaterial: Theme.color("bg.canvas")
+    readonly property color pageMaterial: Theme.color("apple.canvas")
+    readonly property color sidebarMaterial: Theme.color("apple.sidebar")
+    readonly property color contentMaterial: Theme.color("apple.canvas")
     readonly property color groupMaterial: Theme.color("surface.base")
-    readonly property color hairline: Theme.color("line.soft")
+    readonly property color hairline: Theme.color("apple.hairline")
     readonly property color sidebarHover: Theme.isDark ? Theme.alpha("surface.raised", 0.72) : Theme.alpha("surface.float", 0.96)
     readonly property color sidebarSearch: Theme.color("surface.float")
     readonly property color rowHoverMaterial: Theme.isDark ? Theme.alpha("surface.raised", 0.68) : Theme.alpha("surface.sunken", 0.82)
@@ -37,7 +40,7 @@ Item {
     readonly property color accountAccentMuted: Theme.alpha("accent.soft", Theme.isDark ? 0.24 : 0.70)
     readonly property color selectionAccent: accountAccent
     readonly property color dialogShadowColor: Theme.alpha("overlay.scrim", Theme.isDark ? 0.42 : 0.12)
-    readonly property color appleBlue: "#0066CC"
+    readonly property color appleBlue: Theme.color("apple.action")
     readonly property color appleBlueSoft: "#EAF3FF"
     readonly property color appleInk: "#1D1D1F"
     readonly property color appleCanvas: "#F5F5F7"
@@ -61,9 +64,25 @@ Item {
     }
 
     function scrollToMineSection(sectionId) {
+        if (sectionId === "sync")
+            sectionId = "account"
+        else if (sectionId === "about")
+            sectionId = "privacy"
+        else if (sectionId === "memory") {
+            if (shellRef)
+                shellRef.openOverlay(1)
+            return
+        } else if (sectionId === "world") {
+            if (shellRef)
+                shellRef.openOverlay(2)
+            return
+        }
         root.activeMineSection = sectionId
-        if (mainContentLoader.item && mainContentLoader.item.scrollToSection)
-            mainContentLoader.item.scrollToSection(sectionId)
+    }
+
+    function openEngineSettings(categoryIndex) {
+        if (shellRef)
+            shellRef.openSettings(categoryIndex)
     }
 
     function currentModelName() {
@@ -94,6 +113,8 @@ Item {
     }
 
     component DesktopLayout: Item {
+        id: desktopLayoutRoot
+
         function scrollToBottom() {
             accountContent.scrollToBottom()
         }
@@ -102,66 +123,87 @@ Item {
             accountContent.scrollToSection(sectionId)
         }
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
             spacing: 0
 
-            AccountSidebar {
-                Layout.preferredWidth: root.desktopSidebarWidth
-                Layout.fillHeight: true
-            }
-
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.fillHeight: true
-                color: root.hairline
-            }
-
-            AccountContent {
-                id: accountContent
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+
+                AccountContent {
+                    id: accountContent
+                    anchors.fill: parent
+                }
+
+                MineModeSwitcher {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: 14
+                    z: 20
+                    activeSection: root.activeMineSection
+                    onSectionRequested: function(sectionId) { root.scrollToMineSection(sectionId) }
+                }
             }
+
+            MineStatusBar {
+                Layout.fillWidth: true
+                statusText: appController.syncBusy ? appController.syncStatusText : ""
+                onCommandPaletteRequested: commandPalette.open()
+            }
+        }
+
+        MineCommandPalette {
+            id: commandPalette
+            commandHost: root
+        }
+
+        Shortcut {
+            sequences: ["Meta+K", "Ctrl+K"]
+            context: Qt.ApplicationShortcut
+            onActivated: commandPalette.open()
         }
     }
 
-    component CompactLayout: ScrollView {
-        id: compactScroll
-
+    component CompactLayout: Item {
         function scrollToBottom() {
-            contentItem.contentY = Math.max(0, contentItem.contentHeight - height)
+            root.activeMineSection = "privacy"
         }
 
         function scrollToSection(sectionId) {
-            if (compactAccountContent.scrollToSection)
-                compactAccountContent.scrollToSection(sectionId)
+            root.scrollToMineSection(sectionId)
         }
 
-        anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        anchors.topMargin: 16
-        anchors.bottomMargin: 0
-        clip: true
-        contentWidth: availableWidth
-        contentHeight: compactStack.implicitHeight + root.dockClearance + 42
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
         ColumnLayout {
-            id: compactStack
-            width: compactScroll.availableWidth
-            spacing: 14
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            anchors.topMargin: 12
+            anchors.bottomMargin: 0
+            spacing: 0
 
-            AccountSidebar {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 318
+            MineModeSwitcher {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 4
+                Layout.bottomMargin: 8
+                activeSection: root.activeMineSection
+                onSectionRequested: function(sectionId) { root.scrollToMineSection(sectionId) }
             }
 
             AccountContent {
-                id: compactAccountContent
                 Layout.fillWidth: true
-                Layout.preferredHeight: 980
+                Layout.fillHeight: true
             }
+
+            MineStatusBar {
+                Layout.fillWidth: true
+                onCommandPaletteRequested: compactCommandPalette.open()
+            }
+        }
+
+        MineCommandPalette {
+            id: compactCommandPalette
+            commandHost: root
         }
     }
 
@@ -173,6 +215,55 @@ Item {
     Component {
         id: compactLayoutComponent
         CompactLayout {}
+    }
+
+    component MineSectionStrip: RowLayout {
+        id: strip
+        property string activeSection: "overview"
+        signal sectionRequested(string sectionId)
+
+        readonly property var sections: [
+            { id: "overview", label: "\u603B\u89C8" },
+            { id: "companion", label: "\u89D2\u8272" },
+            { id: "desktop", label: "\u684C\u9762" },
+            { id: "account", label: "\u8D26\u53F7" },
+            { id: "privacy", label: "\u9690\u79C1" }
+        ]
+
+        spacing: 6
+
+        Repeater {
+            model: parent.sections
+
+            delegate: Rectangle {
+                required property var modelData
+                required property int index
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 34
+                radius: 8
+                color: strip.activeSection === modelData.id
+                    ? Theme.color("apple.selection")
+                    : (stripMouse.containsMouse ? Theme.alpha("apple.selection", 0.55) : "transparent")
+
+                Text {
+                    anchors.centerIn: parent
+                    text: modelData.label
+                    font.pixelSize: 12
+                    font.family: Theme.fontUi
+                    font.weight: strip.activeSection === modelData.id ? Font.DemiBold : Font.Medium
+                    color: strip.activeSection === modelData.id ? Theme.color("apple.ink") : Theme.color("apple.secondary")
+                }
+
+                MouseArea {
+                    id: stripMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: strip.sectionRequested(modelData.id)
+                }
+            }
+        }
     }
 
     component AccountSidebar: Rectangle {
@@ -190,80 +281,48 @@ Item {
             anchors.bottomMargin: root.compact ? 16 : 20
             spacing: 0
 
-            SidebarProfileHeader {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 64
-            }
-
-            SearchField {
-                Layout.fillWidth: true
-                Layout.topMargin: 26
-                Layout.preferredHeight: 34
-            }
-
             ColumnLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: 24
-                spacing: 10
+                Layout.topMargin: root.compact ? 12 : 20
+                spacing: 2
 
-                SidebarNavRow {
+                AppleSidebarNavRow {
                     label: "总览"
                     iconPath: Icons.home
                     active: root.activeMineSection === "overview"
                     onTriggered: root.scrollToMineSection("overview")
                 }
-                SidebarNavRow {
-                    label: "同伴"
+                AppleSidebarNavRow {
+                    label: "角色与模型"
                     iconPath: Icons.cat
                     active: root.activeMineSection === "companion"
                     onTriggered: root.scrollToMineSection("companion")
                 }
-                SidebarNavRow {
-                    label: "桌面常驻"
+                AppleSidebarNavRow {
+                    label: "桌面与设备"
                     iconPath: Icons.monitor
                     active: root.activeMineSection === "desktop"
                     onTriggered: root.scrollToMineSection("desktop")
                 }
-                SidebarNavRow {
-                    label: "同步"
+                AppleSidebarNavRow {
+                    label: "账号与同步"
                     iconPath: Icons.cloud
-                    active: root.activeMineSection === "sync"
-                    onTriggered: root.scrollToMineSection("sync")
+                    active: root.activeMineSection === "account"
+                    onTriggered: root.scrollToMineSection("account")
                 }
-                SidebarNavRow {
-                    label: "隐私"
+                AppleSidebarNavRow {
+                    label: "数据与隐私"
                     iconPath: Icons.lock
                     active: root.activeMineSection === "privacy"
                     onTriggered: root.scrollToMineSection("privacy")
-                }
-                SidebarNavRow {
-                    label: "关于"
-                    iconPath: Icons.infoCircle
-                    active: root.activeMineSection === "about"
-                    onTriggered: root.scrollToMineSection("about")
                 }
             }
 
             Item { Layout.fillHeight: true }
 
-            RowLayout {
+            SidebarAccountFooter {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 40
-                spacing: 14
-
-                SidebarIconButton {
-                    Layout.preferredWidth: 34
-                    Layout.preferredHeight: 34
-                    iconPath: Icons.sun
-                }
-
-                SidebarIconButton {
-                    Layout.preferredWidth: 34
-                    Layout.preferredHeight: 34
-                    iconPath: Icons.settings
-                }
-
-                Item { Layout.fillWidth: true }
+                Layout.preferredHeight: 52
             }
         }
     }
@@ -353,22 +412,42 @@ Item {
     component AccountContent: Item {
         id: content
 
+        readonly property int sectionIndex: {
+            switch (root.activeMineSection) {
+            case "companion": return 1
+            case "desktop": return 2
+            case "account": return 3
+            case "privacy": return 4
+            default: return 0
+            }
+        }
+
+        readonly property string pageTitle: {
+            switch (content.sectionIndex) {
+            case 1: return "角色与模型"
+            case 2: return "桌面与设备"
+            case 3: return "账号与同步"
+            case 4: return "数据与隐私"
+            default: return "总览"
+            }
+        }
+
+        readonly property string pageSubtitle: {
+            switch (content.sectionIndex) {
+            case 1: return "选择或导入 Live2D 模型。"
+            case 2: return "桌面常驻、手机连接与桌宠行为。"
+            case 3: return root.loggedIn ? "OpenNeko Cloud 已连接。" : "未登录，数据仅保存在本机。"
+            case 4: return "权限、存储与引擎设置。"
+            default: return root.companionDisplayName() + " · " + (appController.desktopCompanionEnabled ? "桌面常驻已开启" : "桌面常驻未开启")
+            }
+        }
+
         function scrollToBottom() {
-            accountScroll.contentItem.contentY = Math.max(0, accountScroll.contentItem.contentHeight - accountScroll.height)
+            root.activeMineSection = "privacy"
         }
 
         function scrollToSection(sectionId) {
-            var target = overviewSection
-            if (sectionId === "companion") target = companionSection
-            else if (sectionId === "desktop") target = desktopSection
-            else if (sectionId === "sync") target = syncSection
-            else if (sectionId === "privacy") target = privacySection
-            else if (sectionId === "about") target = privacySection
-
-            root.activeMineSection = sectionId
-            var mapped = target.mapToItem(scrollHost, 0, 0)
-            var topInset = sectionId === "overview" ? 26 : 22
-            accountScroll.contentItem.contentY = Math.max(0, Math.min(mapped.y - topInset, accountScroll.contentItem.contentHeight - accountScroll.height))
+            root.scrollToMineSection(sectionId)
         }
 
         Rectangle {
@@ -378,156 +457,228 @@ Item {
 
         ColumnLayout {
             anchors.fill: parent
+            anchors.leftMargin: root.compact ? 4 : root.desktopContentGutter
+            anchors.rightMargin: root.compact ? 4 : root.desktopContentGutter
+            anchors.topMargin: content.sectionIndex === 0 ? 48 : (root.compact ? 16 : 20)
+            anchors.bottomMargin: 12
             spacing: 0
 
-            ScrollView {
-                id: accountScroll
+            ColumnLayout {
+                visible: content.sectionIndex !== 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: root.desktopContentWidth
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: 16
+                spacing: 6
+
+                Text {
+                    Layout.fillWidth: true
+                    text: content.pageTitle
+                    font.pixelSize: 22
+                    font.family: Theme.fontUi
+                    font.weight: Font.DemiBold
+                    color: Theme.color("apple.ink")
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: content.pageSubtitle
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 14
+                    font.family: Theme.fontUi
+                    color: Theme.color("apple.secondary")
+                    lineHeight: 1.4
+                }
+            }
+
+            StackLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
-                contentWidth: availableWidth
-                contentHeight: scrollHost.height
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                Layout.maximumWidth: content.sectionIndex === 0 ? -1 : root.desktopContentWidth
+                Layout.alignment: content.sectionIndex === 0 ? Qt.AlignLeft : Qt.AlignHCenter
+                currentIndex: content.sectionIndex
 
-                Item {
-                    id: scrollHost
-                    width: accountScroll.availableWidth
-                    readonly property real bottomNavigationPad: root.compact
-                        ? Math.max(96, root.height * 0.30)
-                        : Math.max(root.dockClearance, 150)
-                    height: accountColumn.implicitHeight + bottomNavigationPad
-
-                    ColumnLayout {
-                        id: accountColumn
-                        width: root.compact
-                            ? Math.max(1, parent.width - 24)
-                            : Math.min(root.desktopContentWidth, Math.max(1, parent.width - root.desktopContentGutter * 2))
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.top: parent.top
-                        anchors.topMargin: root.compact ? 18 : 32
-                        spacing: 36
-
-                        CompanionOverviewPanel {
-                            id: overviewSection
-                            Layout.fillWidth: true
-                        }
-
-                        SectionHeader {
-                            id: companionSection
-                            Layout.fillWidth: true
-                            eyebrow: "MODELS"
-                            title: "同伴库"
-                            subtitle: "选一个 Live2D 形象，或导入你自己的模型。"
-                            actionText: "管理模型"
-                            onActionTriggered: root.scrollToMineSection("companion")
-                        }
-
-                        ModelLibraryStrip {
-                            Layout.fillWidth: true
-                        }
-
-                        SectionHeader {
-                            id: desktopSection
-                            Layout.fillWidth: true
-                            eyebrow: "DESKTOP"
-                            title: "桌面行为"
-                            subtitle: "决定它在桌面上的呈现方式。"
-                        }
-
-                        DesktopBehaviorGrid {
-                            Layout.fillWidth: true
-                        }
-
-                        SectionHeader {
-                            id: syncSection
-                            Layout.fillWidth: true
-                            eyebrow: "ACCOUNT"
-                            title: "账号与同步"
-                            subtitle: root.loggedIn ? "OpenNeko Cloud 已连接。" : "登录后可在多台设备间同步记忆与设置。"
-                            actionText: root.loggedIn ? "管理账号" : "登录"
-                            onActionTriggered: root.loggedIn ? root.scrollToMineSection("sync") : root.openLoginDialog()
-                        }
-
-                        NNASettingGroup {
-                            Layout.fillWidth: true
-                            title: ""
-
-                            NNASettingRow {
-                                iconPath: Icons.character
-                                title: root.loggedIn ? root.displayName : "未登录"
-                                subtitle: root.loggedIn
-                                    ? (appController.accountUserId > 0 ? ("UID " + appController.accountUserId) : "本地账号")
-                                    : "本地模式 · 仅在此设备保存"
-                                valueText: root.loggedIn ? "已连接" : "登录"
-                                valueColor: root.loggedIn ? Theme.color("state.success") : Theme.color("accent.strong")
-                                onTriggered: if (!root.loggedIn) root.openLoginDialog()
-                            }
-                            SettingsDivider {}
-                            NNASettingRow {
-                                iconPath: Icons.sparkle
-                                title: "云端点数"
-                                subtitle: "用于同步、AI 调用与限时模型"
-                                valueText: Number(appController.accountCloudPointBalance).toFixed(0) + " 点"
-                                showChevron: false
-                                interactive: false
-                            }
-                            SettingsDivider {}
-                            NNASettingRow {
-                                iconPath: Icons.iot
-                                title: "本地优先"
-                                subtitle: "优先使用本地数据，离线也能正常使用"
-                                showChevron: false
-                                interactive: true
-
-                                AppleSwitch {
-                                    checked: true
-                                }
-                            }
-                        }
-
-                        SectionHeader {
-                            id: privacySection
-                            Layout.fillWidth: true
-                            eyebrow: "PRIVACY"
-                            title: "隐私与数据"
-                            subtitle: "数据默认只存在本地。导出、清理都在你这一端。"
-                        }
-
-                        NNASettingGroup {
-                            Layout.fillWidth: true
-                            title: ""
-
-                            NNASettingRow {
-                                iconPath: Icons.settings
-                                title: "权限管理"
-                                subtitle: "麦克风、摄像头、文件访问"
-                            }
-                            SettingsDivider {}
-                            NNASettingRow {
-                                iconPath: Icons.memory
-                                title: "数据与存储"
-                                subtitle: "清理缓存、导出、删除全部数据"
-                            }
-                            SettingsDivider {}
-                            NNASettingRow {
-                                iconPath: Icons.bell
-                                title: "通知"
-                                subtitle: "陪伴提醒、状态广播"
-                                showChevron: false
-                                interactive: true
-
-                                AppleSwitch {
-                                    checked: true
-                                }
-                            }
-                        }
-
-                        AboutFooter {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 8
-                        }
-                    }
+                MineOverviewPage {
+                    fillHeight: true
+                    companionName: root.companionDisplayName()
+                    loggedIn: root.loggedIn
+                    onRequestLogin: root.openLoginDialog()
+                    onRequestCompanionSection: root.scrollToMineSection("companion")
+                    onRequestAccountSection: root.scrollToMineSection("account")
+                    onRequestDesktopSection: root.scrollToMineSection("desktop")
+                    onRequestMemory: root.scrollToMineSection("memory")
+                    onRequestWorld: root.scrollToMineSection("world")
+                    onPutOnDesktop: appController.desktopCompanionEnabled = !appController.desktopCompanionEnabled
+                    onConnectPhone: root.connectMobileDevice()
                 }
+
+                CompanionModelsPage {}
+
+                DesktopDevicePage {}
+
+                AccountSyncPage {}
+
+                PrivacyDataPage {}
+            }
+        }
+    }
+
+    function connectMobileDevice() {
+        if (!root.loggedIn) {
+            root.openLoginDialog()
+            return
+        }
+        appController.pushCurrentCompanionToMobile()
+        root.scrollToMineSection("desktop")
+    }
+
+    FolderDialog {
+        id: modelImportDialog
+        title: "选择 Live2D 模型文件夹"
+        onAccepted: modelManager.importModel(selectedFolder)
+    }
+
+    component CompanionModelsPage: Item {
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 16
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                ApplePrimaryButton {
+                    text: "导入模型"
+                    filled: false
+                    onTriggered: modelImportDialog.open()
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                    text: "支持 .model3.json 目录"
+                    font.pixelSize: 12
+                    font.family: Theme.fontUi
+                    color: Theme.color("apple.tertiary")
+                }
+            }
+
+            ModelLibraryStrip {
+                gridMode: true
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+        }
+    }
+
+    component DesktopDevicePage: Item {
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 20
+
+            MineDeviceTopology {
+                Layout.fillWidth: true
+                loggedIn: root.loggedIn
+                companionEnabled: appController.desktopCompanionEnabled
+                onConnectPhone: root.connectMobileDevice()
+            }
+
+            DesktopBehaviorGrid {}
+
+            Item { Layout.fillHeight: true }
+        }
+    }
+
+    component AccountSyncPage: Item {
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 14
+
+            MineFieldRow {
+                label: root.loggedIn ? root.displayName : "状态"
+                value: root.loggedIn ? "\u5DF2\u767B\u5F55" : "\u672A\u767B\u5F55"
+                valueColor: root.loggedIn ? Theme.color("state.success") : Theme.color("apple.action")
+                interactive: !root.loggedIn
+                onTriggered: root.openLoginDialog()
+                AppleTextButton {
+                    visible: !root.loggedIn
+                    text: "登录"
+                    onTriggered: root.openLoginDialog()
+                }
+            }
+
+            MineFieldRow {
+                visible: root.loggedIn && appController.accountUserId > 0
+                label: "用户 ID"
+                value: String(appController.accountUserId)
+            }
+
+            MineFieldRow {
+                label: "云端点数"
+                value: Number(appController.accountCloudPointBalance).toFixed(0) + " 点"
+            }
+
+            MineFieldRow {
+                label: "同步"
+                value: appController.syncBusy ? "同步中…" : (root.loggedIn ? "可手动刷新" : "需登录")
+                interactive: root.loggedIn && !appController.syncBusy
+                showChevron: false
+                onTriggered: root.refreshProfile()
+                AppleTextButton {
+                    visible: root.loggedIn
+                    text: "刷新"
+                    onTriggered: root.refreshProfile()
+                }
+            }
+
+            Item { Layout.fillHeight: true }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                AppleTextButton {
+                    visible: root.loggedIn
+                    text: "退出登录"
+                    onTriggered: appController.logoutAccount()
+                }
+            }
+        }
+    }
+
+    component PrivacyDataPage: Item {
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 14
+
+            MineFieldRow {
+                label: "隐私与权限"
+                value: "引擎设置"
+                interactive: true
+                showChevron: true
+                onTriggered: root.openEngineSettings(3)
+            }
+
+            MineFieldRow {
+                label: "通用与引擎"
+                value: "外观、AI、桌宠"
+                interactive: true
+                showChevron: true
+                onTriggered: root.openEngineSettings(0)
+            }
+
+            MineFieldRow {
+                label: "AI 与模型接口"
+                value: "服务商配置"
+                interactive: true
+                showChevron: true
+                onTriggered: root.openEngineSettings(2)
+            }
+
+            Item { Layout.fillHeight: true }
+
+            AboutFooter {
+                Layout.fillWidth: true
             }
         }
     }
@@ -624,10 +775,8 @@ Item {
     }
 
     component SearchField: Rectangle {
-        radius: 7
-        color: root.sidebarSearch
-        border.color: root.hairline
-        border.width: 1
+        radius: 8
+        color: Theme.alpha("apple.ink", Theme.isDark ? 0.08 : 0.04)
 
         RowLayout {
             anchors.fill: parent
@@ -656,6 +805,56 @@ Item {
                 font.weight: Font.Medium
                 color: Theme.color("text.tertiary")
             }
+        }
+    }
+
+    component SidebarAccountFooter: Rectangle {
+        radius: 8
+        color: footerMouse.containsMouse ? Theme.color("apple.selection") : "transparent"
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 4
+            anchors.rightMargin: 4
+            spacing: 10
+
+            AvatarBubble {
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
+                compactAvatar: true
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+
+                Text {
+                    Layout.fillWidth: true
+                    text: root.loggedIn ? root.displayName : "未登录"
+                    elide: Text.ElideRight
+                    font.pixelSize: 13
+                    font.family: Theme.fontUi
+                    font.weight: Font.DemiBold
+                    color: Theme.color("apple.ink")
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: root.loggedIn ? root.accountSubtitle : "点按登录"
+                    elide: Text.ElideRight
+                    font.pixelSize: 11
+                    font.family: Theme.fontUi
+                    color: Theme.color("apple.tertiary")
+                }
+            }
+        }
+
+        MouseArea {
+            id: footerMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.loggedIn ? root.scrollToMineSection("account") : root.openLoginDialog()
         }
     }
 
@@ -870,7 +1069,6 @@ Item {
 
     component SectionHeader: Item {
         id: header
-        property string eyebrow: ""
         property string title: ""
         property string subtitle: ""
         property string actionText: ""
@@ -882,63 +1080,35 @@ Item {
             id: column
             anchors.left: parent.left
             anchors.right: parent.right
-            spacing: 4
-
-            Text {
-                visible: header.eyebrow !== ""
-                text: header.eyebrow
-                font.pixelSize: 11
-                font.family: Theme.fontUi
-                font.weight: Font.Bold
-                font.letterSpacing: 1.6
-                color: Theme.color("accent.strong")
-            }
+            spacing: 6
 
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: 2
                 spacing: 12
 
                 Text {
                     Layout.fillWidth: true
                     text: header.title
                     elide: Text.ElideRight
-                    font.pixelSize: 26
+                    font.pixelSize: 17
                     font.family: Theme.fontUi
-                    font.weight: Font.Black
-                    color: Theme.color("text.primary")
+                    font.weight: Font.DemiBold
+                    color: Theme.color("apple.ink")
                 }
 
-                Rectangle {
+                Text {
                     visible: header.actionText !== ""
-                    Layout.preferredHeight: 28
-                    Layout.preferredWidth: actionLabel.implicitWidth + 26
-                    radius: 14
-                    color: actionMouse.pressed
-                        ? Theme.alpha("accent.soft", Theme.isDark ? 0.55 : 0.85)
-                        : actionMouse.containsMouse
-                            ? Theme.alpha("accent.soft", Theme.isDark ? 0.40 : 0.66)
-                            : "transparent"
-
-                    Text {
-                        id: actionLabel
-                        anchors.centerIn: parent
-                        text: header.actionText
-                        font.pixelSize: 12
-                        font.family: Theme.fontUi
-                        font.weight: Font.DemiBold
-                        color: Theme.color("accent.strong")
-                    }
+                    text: header.actionText
+                    font.pixelSize: 13
+                    font.family: Theme.fontUi
+                    color: Theme.color("apple.action")
 
                     MouseArea {
-                        id: actionMouse
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: header.actionTriggered()
                     }
-
-                    Behavior on color { ColorAnimation { duration: 120 } }
                 }
             }
 
@@ -949,7 +1119,104 @@ Item {
                 wrapMode: Text.WordWrap
                 font.pixelSize: 13
                 font.family: Theme.fontUi
-                color: Theme.color("text.secondary")
+                color: Theme.color("apple.tertiary")
+            }
+        }
+    }
+
+    component ModelLibraryTile: Item {
+        id: tile
+
+        property var modelData: null
+        property int tileIndex: 0
+
+        readonly property string modelId: modelData ? modelData.id : ("placeholder-" + tileIndex)
+        readonly property string modelName: modelData ? modelData.name : "添加模型"
+        readonly property string modelThumb: modelData ? modelData.thumbnailUrl : ""
+        readonly property bool isCurrentModel: modelData ? modelData.isCurrent === true : false
+        readonly property bool isPresetModel: modelData ? modelData.isPreset === true : false
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 6
+            spacing: 8
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumHeight: 132
+                radius: 8
+                color: Theme.alpha("apple.ink", Theme.isDark ? 0.10 : 0.05)
+                clip: true
+
+                Image {
+                    anchors.fill: parent
+                    source: tile.modelThumb
+                    fillMode: Image.PreserveAspectCrop
+                    visible: tile.modelThumb !== "" && status === Image.Ready
+                    asynchronous: true
+                }
+
+                ShapeIcon {
+                    anchors.centerIn: parent
+                    visible: tile.modelThumb === "" || !tile.modelData
+                    pathData: tile.modelData ? Icons.paw : Icons.plus
+                    size: 26
+                    strokeWidth: 1.6
+                    iconColor: Theme.color("apple.tertiary")
+                }
+
+                Rectangle {
+                    visible: tile.isCurrentModel
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.margins: 8
+                    width: currentLabel.implicitWidth + 10
+                    height: 18
+                    radius: 4
+                    color: Theme.alpha("apple.ink", 0.72)
+
+                    Text {
+                        id: currentLabel
+                        anchors.centerIn: parent
+                        text: "当前"
+                        font.pixelSize: 10
+                        font.family: Theme.fontUi
+                        font.weight: Font.Medium
+                        color: "#FFFFFF"
+                    }
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: tile.modelName
+                elide: Text.ElideRight
+                font.pixelSize: 12
+                font.family: Theme.fontUi
+                font.weight: tile.isCurrentModel ? Font.DemiBold : Font.Medium
+                color: Theme.color("apple.ink")
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: !tile.modelData ? "导入模型"
+                    : (tile.isPresetModel ? "内置" : "本地")
+                elide: Text.ElideRight
+                font.pixelSize: 11
+                font.family: Theme.fontUi
+                color: Theme.color("apple.tertiary")
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                if (tile.modelData)
+                    modelManager.switchModel(tile.modelData.id)
+                else
+                    modelImportDialog.open()
             }
         }
     }
@@ -957,253 +1224,136 @@ Item {
     component ModelLibraryStrip: Item {
         id: strip
 
-        readonly property var libraryModels: modelManager.modelList || []
+        property bool gridMode: false
 
-        Layout.preferredHeight: 196
+        readonly property var libraryModels: modelManager.modelList || []
+        readonly property int tileCount: strip.libraryModels.length > 0 ? strip.libraryModels.length : 4
+        readonly property int gridColumns: Math.max(2, Math.min(4, Math.floor(Math.max(width, 1) / 156)))
+
+        Layout.fillWidth: true
+        Layout.fillHeight: gridMode
+        Layout.preferredHeight: gridMode ? -1 : 168
+
+        GridView {
+            id: modelGrid
+            anchors.fill: parent
+            visible: strip.gridMode
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            cellWidth: Math.floor(Math.max(width, 1) / strip.gridColumns)
+            cellHeight: 196
+            model: strip.tileCount
+
+            delegate: ModelLibraryTile {
+                width: modelGrid.cellWidth
+                height: modelGrid.cellHeight
+                tileIndex: index
+                modelData: strip.libraryModels.length > 0 ? modelData : null
+            }
+        }
 
         ListView {
             id: stripList
             anchors.fill: parent
-            anchors.leftMargin: -2
-            anchors.rightMargin: -2
+            visible: !strip.gridMode
             orientation: ListView.Horizontal
-            spacing: 14
+            spacing: 20
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            model: strip.libraryModels.length > 0 ? strip.libraryModels : 4
+            model: strip.tileCount
             ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
 
-            delegate: Rectangle {
-                width: 158
-                height: 192
-                radius: 14
-                color: Theme.color("surface.base")
-                border.color: isCurrentModel
-                    ? Theme.alpha("accent.strong", 0.62)
-                    : Theme.alpha("line.soft", Theme.isDark ? 0.62 : 0.86)
-                border.width: isCurrentModel ? 2 : 1
+            delegate: Item {
+                width: 108
+                height: 168
 
-                readonly property var modelData: strip.libraryModels.length > 0 ? modelData : null
-                readonly property string modelId: modelData ? modelData.id : ("placeholder-" + index)
-                readonly property string modelName: modelData ? modelData.name : "添加模型"
-                readonly property string modelThumb: modelData ? modelData.thumbnailUrl : ""
-                readonly property bool isCurrentModel: modelData ? modelData.isCurrent === true : false
-                readonly property bool isPresetModel: modelData ? modelData.isPreset === true : false
-
-                ColumnLayout {
+                ModelLibraryTile {
                     anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 8
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 124
-                        radius: 10
-                        color: Theme.alpha("accent.soft", Theme.isDark ? 0.30 : 0.46)
-                        clip: true
-
-                        Image {
-                            anchors.fill: parent
-                            source: modelThumb
-                            fillMode: Image.PreserveAspectCrop
-                            visible: modelThumb !== "" && status === Image.Ready
-                            asynchronous: true
-                        }
-
-                        ShapeIcon {
-                            anchors.centerIn: parent
-                            visible: modelThumb === "" || !modelData
-                            pathData: modelData ? Icons.paw : Icons.plus
-                            size: 30
-                            strokeWidth: 1.7
-                            iconColor: Theme.alpha("accent.strong", Theme.isDark ? 0.96 : 0.78)
-                        }
-
-                        Rectangle {
-                            visible: isCurrentModel
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.margins: 6
-                            width: badgeText.implicitWidth + 12
-                            height: 18
-                            radius: 9
-                            color: Theme.color("accent.base")
-
-                            Text {
-                                id: badgeText
-                                anchors.centerIn: parent
-                                text: "当前"
-                                font.pixelSize: 10
-                                font.family: Theme.fontUi
-                                font.weight: Font.Bold
-                                color: "#FFFFFF"
-                            }
-                        }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 2
-                        text: modelName
-                        elide: Text.ElideRight
-                        font.pixelSize: 13
-                        font.family: Theme.fontUi
-                        font.weight: Font.DemiBold
-                        color: Theme.color("text.primary")
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 2
-                        text: !modelData ? "导入 .model3.json"
-                            : (isPresetModel ? "内置模型" : "导入模型")
-                        elide: Text.ElideRight
-                        font.pixelSize: 11
-                        font.family: Theme.fontUi
-                        color: Theme.color("text.tertiary")
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (modelData)
-                            modelManager.switchModel(modelData.id)
-                        else
-                            root.scrollToMineSection("companion")
-                    }
+                    tileIndex: index
+                    modelData: strip.libraryModels.length > 0 ? modelData : null
                 }
             }
         }
     }
 
-    component DesktopBehaviorGrid: GridLayout {
-        id: behaviorGrid
+    component DesktopBehaviorGrid: Item {
+        implicitWidth: behaviorColumn.implicitWidth
+        implicitHeight: behaviorColumn.implicitHeight
 
-        Layout.fillWidth: true
-        columns: width < 720 ? 1 : 2
-        columnSpacing: 14
-        rowSpacing: 14
+        ColumnLayout {
+            id: behaviorColumn
+            width: parent.width
+            spacing: 12
 
-        BehaviorTile {
-            iconPath: Icons.home
-            title: "桌面常驻"
-            subtitle: appController.desktopCompanionEnabled ? "正在桌面陪伴" : "未放出"
-            tileChecked: appController.desktopCompanionEnabled
-            onTileToggled: appController.desktopCompanionEnabled = !appController.desktopCompanionEnabled
+        MineFieldRow {
+            label: "桌面常驻"
+            value: appController.desktopCompanionEnabled ? "开启" : "关闭"
+            AppleToggleSwitch {
+                checked: appController.desktopCompanionEnabled
+                onToggled: function(on) { appController.desktopCompanionEnabled = on }
+            }
         }
 
-        BehaviorTile {
-            iconPath: Icons.status
-            title: "置顶显示"
-            subtitle: root.desktopAlwaysOnTop ? "总是浮在最前" : "随窗口排序"
-            tileChecked: root.desktopAlwaysOnTop
-            onTileToggled: root.desktopAlwaysOnTop = !root.desktopAlwaysOnTop
-        }
-
-        BehaviorTile {
-            iconPath: Icons.sparkle
-            title: "点击穿透"
-            subtitle: root.desktopClickThrough ? "鼠标穿过它" : "可被点击"
-            tileChecked: root.desktopClickThrough
-            onTileToggled: root.desktopClickThrough = !root.desktopClickThrough
-        }
-
-        BehaviorTile {
-            iconPath: Icons.moon
-            title: "安静模式"
-            subtitle: root.desktopQuietMode ? "不发出声音" : "正常发声"
-            tileChecked: root.desktopQuietMode
-            onTileToggled: root.desktopQuietMode = !root.desktopQuietMode
-        }
-
-        NNACardPanel {
+        ColumnLayout {
             Layout.fillWidth: true
-            Layout.columnSpan: behaviorGrid.columns
-            Layout.preferredHeight: 100
-            panelRadius: 14
-            fillColor: Theme.color("surface.base")
-            strokeColor: Theme.alpha("line.soft", Theme.isDark ? 0.62 : 0.86)
+            Layout.topMargin: 4
+            spacing: 8
 
             RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 22
-                anchors.rightMargin: 22
-                spacing: 18
+                Layout.fillWidth: true
 
-                ShapeIcon {
-                    Layout.preferredWidth: 30
-                    Layout.preferredHeight: 30
-                    pathData: Icons.character
-                    size: 24
-                    strokeWidth: 1.7
-                    iconColor: Theme.color("accent.strong")
+                Text {
+                    Layout.fillWidth: true
+                    text: "桌面尺寸"
+                    font.pixelSize: 13
+                    font.family: Theme.fontUi
+                    color: Theme.color("apple.secondary")
                 }
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 12
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "桌面尺寸"
-                            font.pixelSize: 14
-                            font.family: Theme.fontUi
-                            font.weight: Font.DemiBold
-                            color: Theme.color("text.primary")
-                        }
-
-                        Text {
-                            text: Math.round(root.desktopModelScale * 100) + "%"
-                            font.pixelSize: 13
-                            font.family: Theme.fontUi
-                            font.weight: Font.DemiBold
-                            color: Theme.color("accent.strong")
-                        }
-                    }
-
-                    Slider {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 22
-                        from: 1.0
-                        to: 1.4
-                        value: root.desktopModelScale
-                        onMoved: root.desktopModelScale = value
-
-                        background: Rectangle {
-                            x: parent.leftPadding
-                            y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                            width: parent.availableWidth
-                            height: 4
-                            radius: 2
-                            color: Theme.alpha("text.primary", Theme.isDark ? 0.14 : 0.10)
-
-                            Rectangle {
-                                width: parent.parent.visualPosition * parent.width
-                                height: parent.height
-                                radius: 2
-                                color: Theme.color("accent.base")
-                            }
-                        }
-
-                        handle: Rectangle {
-                            x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                            y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                            width: 16
-                            height: 16
-                            radius: 8
-                            color: "#FFFFFF"
-                            border.color: Theme.alpha("text.primary", 0.18)
-                            border.width: 1
-                        }
-                    }
+                Text {
+                    text: Math.round(root.desktopModelScale * 100) + "%"
+                    font.pixelSize: 13
+                    font.family: Theme.fontUi
+                    color: Theme.color("apple.tertiary")
                 }
             }
+
+            Slider {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 22
+                from: 1.0
+                to: 1.4
+                value: root.desktopModelScale
+                onMoved: root.desktopModelScale = value
+
+                background: Rectangle {
+                    x: parent.leftPadding
+                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                    width: parent.availableWidth
+                    height: 3
+                    radius: 1.5
+                    color: Theme.alpha("apple.ink", Theme.isDark ? 0.14 : 0.08)
+
+                    Rectangle {
+                        width: parent.parent.visualPosition * parent.width
+                        height: parent.height
+                        radius: 1.5
+                        color: Theme.color("apple.action")
+                    }
+                }
+
+                handle: Rectangle {
+                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                    width: 14
+                    height: 14
+                    radius: 7
+                    color: "#FFFFFF"
+                    border.color: Theme.alpha("apple.ink", 0.12)
+                    border.width: 1
+                }
+            }
+        }
         }
     }
 

@@ -16,13 +16,8 @@ QtObject {
     readonly property real contentX: Math.round(mainAreaX + (mainAreaWidth - contentWidth) / 2)
     readonly property real contentCenterX: contentX + contentWidth / 2
 
-    readonly property real dockMaxWidth: Math.max(1, Math.min(540, windowWidth - 48))
-    readonly property real dockMinWidth: Math.max(1, Math.min(440, dockMaxWidth))
-    readonly property real dockWidth: Math.round(clamp(windowWidth * 0.42, dockMinWidth, dockMaxWidth))
-    readonly property real dockHeight: 58
-    readonly property real dockBottomMargin: 28
-    readonly property real dockRadius: dockHeight / 2
-    readonly property real dockClearance: dockHeight + dockBottomMargin + 24
+    readonly property real shellRailWidth: 0
+    readonly property real contentBottomInset: 24
 
     function clamp(value, minValue, maxValue) {
         return Math.max(minValue, Math.min(maxValue, value))

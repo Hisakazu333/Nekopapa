@@ -74,6 +74,24 @@ qt_add_qml_module(OpenNekoEngine
         qml/core/NNADesktopLayoutMetrics.qml
         qml/core/ShapeIcon.qml
         qml/core/NNAAppShell.qml
+        qml/core/NNAAppNavSegment.qml
+        qml/core/NNAShellSideNav.qml
+        qml/core/apple/AppleSettingGroup.qml
+        qml/core/apple/AppleSettingsSection.qml
+        qml/core/apple/AppleSettingRow.qml
+        qml/core/apple/AppleSettingDivider.qml
+        qml/core/apple/ApplePrimaryButton.qml
+        qml/core/apple/AppleTextButton.qml
+        qml/core/apple/AppleToggleSwitch.qml
+        qml/core/apple/AppleSidebarNavRow.qml
+        qml/features/mine/MineFieldRow.qml
+        qml/features/mine/MineOverviewPage.qml
+        qml/features/mine/MineIconRail.qml
+        qml/features/mine/MineInspectorRow.qml
+        qml/features/mine/MineStatusBar.qml
+        qml/features/mine/MineCommandPalette.qml
+        qml/features/mine/MineDeviceTopology.qml
+        qml/features/mine/MineModeSwitcher.qml
         qml/windows/DesktopCompanionWindow.qml
         qml/windows/AgentWorkspaceWindow.qml
         qml/features/home/HomeView.qml

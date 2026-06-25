@@ -31,7 +31,15 @@
 using namespace Qt::StringLiterals;
 
 namespace {
+
 constexpr auto kMainWindowGeometryKey = "window/mainGeometry/v2";
+
+void publishWindowChromeLeadingInset(QQmlApplicationEngine &engine, QWindow *window)
+{
+    engine.rootContext()->setContextProperty(
+        QStringLiteral("windowChromeLeadingInset"),
+        NNAWindowChrome::trafficLightsLeadingMargin(window));
+}
 
 void centerWindowOnScreen(QWindow *window)
 {
@@ -53,6 +61,36 @@ void centerWindowOnScreen(QWindow *window)
         available.x() + (available.width() - size.width()) / 2,
         available.y() + (available.height() - size.height()) / 2);
     window->setPosition(position);
+}
+
+void fitInitialWindowToScreen(QWindow *window)
+{
+    if (!window) {
+        return;
+    }
+
+    QScreen *screen = window->screen();
+    if (!screen) {
+        screen = QGuiApplication::primaryScreen();
+    }
+    if (!screen) {
+        return;
+    }
+
+    const QRect available = screen->availableGeometry();
+    QSize size = window->size();
+    const int maxWidth = qMax(680, int(available.width() * 0.92));
+    const int maxHeight = qMax(820, int(available.height() * 0.92));
+
+    if (size.width() > maxWidth) {
+        size.setWidth(maxWidth);
+    }
+    if (size.height() > maxHeight) {
+        size.setHeight(maxHeight);
+    }
+
+    window->resize(size);
+    centerWindowOnScreen(window);
 }
 
 bool isFullscreenWindow(const QWindow *window)
@@ -97,7 +135,7 @@ void saveMainWindowGeometry(QWindow *window)
     }
 
     const QRect geometry = window->geometry();
-    if (!geometry.isValid() || geometry.width() < 980 || geometry.height() < 720) {
+    if (!geometry.isValid() || geometry.width() < 680 || geometry.height() < 820) {
         return;
     }
 
@@ -207,13 +245,20 @@ int main(int argc, char *argv[])
         NNAWindowChrome::applyMainWindowChrome(window);
         const bool restoredGeometry = restoreMainWindowGeometry(window);
         if (!restoredGeometry) {
-            centerWindowOnScreen(window);
+            fitInitialWindowToScreen(window);
         }
         installMainWindowGeometryPersistence(app, window);
         window->show();
+        publishWindowChromeLeadingInset(engine, window);
+        QTimer::singleShot(0, &app, [&engine, window]() {
+            publishWindowChromeLeadingInset(engine, window);
+        });
+        QTimer::singleShot(200, &app, [&engine, window]() {
+            publishWindowChromeLeadingInset(engine, window);
+        });
         if (!restoredGeometry) {
             QTimer::singleShot(0, window, [window]() {
-                centerWindowOnScreen(window);
+                fitInitialWindowToScreen(window);
             });
         }
     }

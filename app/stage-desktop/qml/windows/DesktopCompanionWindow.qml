@@ -177,7 +177,7 @@ Window {
 
         MiniActionBubble {
             iconPath: Icons.chat
-            onTriggered: if (shellRef) shellRef.currentPage = 1
+            onTriggered: if (shellRef) shellRef.openOverlay(0)
         }
 
         MiniActionBubble {
@@ -187,12 +187,12 @@ Window {
 
         MiniActionBubble {
             iconPath: Icons.memory
-            onTriggered: if (shellRef) shellRef.currentPage = 2
+            onTriggered: if (shellRef) shellRef.openMineSection("memory")
         }
 
         MiniActionBubble {
             iconPath: Icons.more
-            onTriggered: if (shellRef) shellRef.currentPage = 5
+            onTriggered: if (shellRef) shellRef.openMineSection("overview")
         }
     }
 

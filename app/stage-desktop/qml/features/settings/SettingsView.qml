@@ -2,8 +2,14 @@ import QtQuick
 import QtQuick.Layouts
 
 Item {
+    id: root
+
     SettingsStore { id: settingsStore }
     readonly property var s: settingsStore.state
+
+    function openCategory(index) {
+        settingsStore.setCategory(index)
+    }
 
     RowLayout {
         anchors.fill: parent

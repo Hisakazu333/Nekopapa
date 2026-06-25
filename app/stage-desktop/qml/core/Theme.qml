@@ -28,7 +28,17 @@ QtObject {
             "state.warning":   "#A96A25",
             "state.danger":    "#C94A4A",
             "info":            "#3E6EA8",
-            "overlay.scrim":   "#0F141C"
+            "overlay.scrim":   "#0F141C",
+            "apple.canvas":    "#F5F5F7",
+            "apple.sidebar":   "#EBEBED",
+            "apple.grouped":   "#FFFFFF",
+            "apple.hairline":  "#D2D2D7",
+            "apple.ink":       "#1D1D1F",
+            "apple.secondary": "#6E6E73",
+            "apple.tertiary":  "#86868B",
+            "apple.action":    "#007AFF",
+            "apple.actionHover":"#0066CC",
+            "apple.selection": "#E8E8ED"
         },
         1: {
             "bg.canvas":       "#F7F7F5",
@@ -50,7 +60,17 @@ QtObject {
             "state.warning":   "#A96A25",
             "state.danger":    "#C94A4A",
             "info":            "#3E6EA8",
-            "overlay.scrim":   "#0F141C"
+            "overlay.scrim":   "#0F141C",
+            "apple.canvas":    "#F5F5F7",
+            "apple.sidebar":   "#EBEBED",
+            "apple.grouped":   "#FFFFFF",
+            "apple.hairline":  "#D2D2D7",
+            "apple.ink":       "#1D1D1F",
+            "apple.secondary": "#6E6E73",
+            "apple.tertiary":  "#86868B",
+            "apple.action":    "#007AFF",
+            "apple.actionHover":"#0066CC",
+            "apple.selection": "#E8E8ED"
         },
         2: {
             "bg.canvas":       "#0B0B0D",
@@ -72,7 +92,17 @@ QtObject {
             "state.warning":   "#E0A24D",
             "state.danger":    "#EA6E75",
             "info":            "#74B9F0",
-            "overlay.scrim":   "#000000"
+            "overlay.scrim":   "#000000",
+            "apple.canvas":    "#1C1C1E",
+            "apple.sidebar":   "#161618",
+            "apple.grouped":   "#2C2C2E",
+            "apple.hairline":  "#3A3A3C",
+            "apple.ink":       "#F5F5F7",
+            "apple.secondary": "#AEAEB2",
+            "apple.tertiary":  "#8E8E93",
+            "apple.action":    "#0A84FF",
+            "apple.actionHover":"#409CFF",
+            "apple.selection": "#3A3A3C"
         }
     })
 
@@ -109,6 +139,10 @@ QtObject {
     readonly property int radiusMd:  14
     readonly property int radiusLg:  22
     readonly property int radiusXl:  30
+    readonly property int appleRadiusGroup: 10
+    readonly property int appleRadiusButton: 8
+    readonly property int appleSidebarWidth: 260
+    readonly property int appleContentMaxWidth: 720
 
     // Backward compat — avoid breaking unused components
     function glass(opacity: real): color {
