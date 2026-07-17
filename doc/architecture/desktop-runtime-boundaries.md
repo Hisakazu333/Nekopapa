@@ -127,7 +127,9 @@ NekoCore-Nano -> immutable snapshot / presentation intent -> UI 或 renderer
 
 React 可以保存选中标签、输入草稿和面板展开状态；renderer 可以保存纹理、当前帧和插值；Tauri 可以保存子进程 PID 和协议会话。账号、记忆、关系、身体状态和 Agent 执行状态必须有唯一权威来源。
 
-当前原型值必须显式标记为 fixture、preview 或 simulated，且不能写回真实存储。接入真实服务时先定义 port 与 DTO，再替换 adapter，不在 JSX 中直接增加 `fetch` 或散落 `invoke`。
+当前原型值必须在 adapter、contract 或页面状态说明中标记为 fixture、preview 或
+simulated，且不能写回真实存储。页面可以继续消费 mock adapter；接入真实服务时先定义
+port 与 DTO，再替换 adapter，不在 JSX 中直接增加 `fetch` 或散落 `invoke`。
 
 ## 协议与安全边界
 

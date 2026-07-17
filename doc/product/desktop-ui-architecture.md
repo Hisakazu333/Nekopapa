@@ -120,7 +120,10 @@ zoom 不得改变：
 
 ### Prototype data
 
-小屋原型中的天气、身体状态、日程、记忆和在线状态是产品 intent。当前没有真实 owner 的值必须标记为 fixture、preview 或 simulated，不能伪装成实时数据。
+小屋原型中的天气、身体状态、日程、记忆和在线状态是产品 intent。当前没有真实 owner
+的值必须在 adapter、contract 或页面状态说明中标记为 fixture、preview 或 simulated；
+页面可以继续使用 mock 数据，但不能把 mock 来源写成已接入的实时服务。后端接入时替换
+adapter 与 DTO，不在页面组件中散落数据源判断。
 
 ## 其他产品页面
 
