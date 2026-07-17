@@ -185,7 +185,7 @@ Issue 只有在以下条件满足时才关闭：
 
 - 类型/区域/优先级：`type:tech-debt`、`area:engine`、`priority:p2`
 - 证据：产品和桌面包已统一为 NekoPapa，但 CMake project/target、sidecar binary、
-  Stage namespace、协议示例和 Frozen Qt 资源 URI 仍包含 `OpenNeko/openneko`。
+  Stage namespace、协议示例和 Frozen Qt 资源 URI 仍包含 `openneko` legacy 标识。
 - 范围：确定 `nna` namespace、`NNA_` option 和 `nekopapa-*` app binary 的目标命名；
   为 externalBin、构建脚本和消费者提供有期限的兼容迁移。
 - 验收：新产品文案和文档名称不出现 legacy 品牌；源码标识迁移后，干净 checkout、
