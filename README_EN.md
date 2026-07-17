@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/cat_moon_icon_no_black_corners.png" alt="NekoPapa App Logo" width="180">
+</p>
+
 # NekoPapa
 
 [简体中文](README.md) | English
