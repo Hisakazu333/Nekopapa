@@ -613,3 +613,9 @@ textarea::placeholder {
   background: var(--success-soft);
   color: var(--success);
 }
+
+.state-badge--warning {
+  border-color: rgba(169, 106, 37, 0.24);
+  background: var(--warning-soft);
+  color: var(--warning);
+}

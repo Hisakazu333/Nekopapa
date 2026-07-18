@@ -168,7 +168,7 @@ body:has(.app-shell--windowed) {
   grid-column: 3;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 10px;
 }
 
 .agent-shortcut {
@@ -194,17 +194,175 @@ body:has(.app-shell--windowed) {
 
 .runtime-state {
   display: inline-flex;
+  height: 36px;
   align-items: center;
   gap: 8px;
+  padding: 0 2px;
   color: #524d48;
   font-size: 12px;
   white-space: nowrap;
 }
 
+.account-menu {
+  position: relative;
+  z-index: 50;
+}
+
+.account-menu__trigger {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(73, 66, 60, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 2px;
+  color: #5d5954;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.account-menu__trigger:hover,
+.account-menu__trigger.is-open {
+  border-color: rgba(221, 95, 95, 0.3);
+  background: var(--home-accent-soft);
+  color: var(--home-accent-hover);
+}
+
+.account-menu__avatar,
+.account-menu__profile-avatar {
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+  background: #f1d8c6;
+  color: #8d655c;
+}
+
+.account-menu__avatar {
+  width: 39px;
+  height: 39px;
+}
+
+.account-menu__avatar img,
+.account-menu__profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+  transform: scale(1.95);
+}
+
+.account-menu__avatar.has-user-image,
+.account-menu__profile-avatar.has-user-image {
+  background: #ece9e5;
+}
+
+.account-menu__avatar.has-user-image img,
+.account-menu__profile-avatar.has-user-image img {
+  object-position: center;
+  transform: none;
+}
+
+.account-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 188px;
+  border: 1px solid rgba(73, 66, 60, 0.14);
+  border-radius: 9px;
+  background: rgba(253, 251, 248, 0.97);
+  box-shadow: 0 16px 34px rgba(65, 48, 36, 0.18);
+  padding: 8px;
+  color: var(--home-text);
+}
+
+.account-menu__profile {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 7px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 8px;
+}
+
+.account-menu__profile-avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.account-menu__profile > span:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.account-menu__profile strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu__profile small {
+  color: var(--home-muted);
+  font-size: 10px;
+}
+
+.account-menu__profile > i,
+.account-menu__hint::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #aaa59f;
+  content: "";
+}
+
+.account-menu__profile > i.is-online {
+  background: var(--home-green);
+}
+
+.account-menu__profile > i.is-offline {
+  background: #c68435;
+}
+
+.account-menu__divider {
+  height: 1px;
+  background: var(--home-line);
+  margin: 1px 5px 6px;
+}
+
+.account-menu__panel > button {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 7px;
+  background: transparent;
+  padding: 0 8px;
+  color: #4b4641;
+  font-size: 12px;
+  text-align: left;
+}
+
+.account-menu__panel > button:hover {
+  background: rgba(221, 95, 95, 0.09);
+  color: var(--home-accent-hover);
+}
+
+.account-menu__hint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 8px 4px;
+  color: var(--home-muted);
+  font-size: 10px;
+}
+
 .topbar-settings {
   display: grid;
   width: 38px;
-  height: 38px;
+  height: 36px;
   place-items: center;
   border-radius: 8px;
   background: transparent;
@@ -1048,7 +1206,7 @@ body:has(.app-shell--windowed) {
   }
 
   .topbar-actions {
-    gap: 9px;
+    gap: 8px;
   }
 
   .home-layout {
@@ -1076,10 +1234,6 @@ body:has(.app-shell--windowed) {
     grid-column: 3;
   }
 
-  .home-composer {
-    right: 8%;
-    left: 8%;
-  }
 }
 
 @media (max-height: 760px) and (min-width: 841px) {
@@ -1139,6 +1293,12 @@ body:has(.app-shell--windowed) {
   .home-composer {
     bottom: 15px;
     height: 58px;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    padding-block: 7px;
+  }
+
+  .home-composer__field {
+    height: 42px;
   }
 
   .home-composer > button {
@@ -1167,7 +1327,7 @@ body:has(.app-shell--windowed) {
 
   .app-header .topbar {
     height: 72px;
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) 78px;
     padding: 0 7px;
   }
 
@@ -1208,12 +1368,13 @@ body:has(.app-shell--windowed) {
   }
 
   .topbar-settings {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 
   .topbar-actions {
     grid-column: 2;
+    gap: 4px;
   }
 
   .home-scene__background {
@@ -1324,8 +1485,12 @@ body:has(.app-shell--windowed) {
     bottom: 14px;
     left: 12px;
     height: 62px;
-    grid-template-columns: 20px minmax(0, 1fr) 46px;
-    padding-left: 13px;
+    grid-template-columns: minmax(0, 1fr) 46px;
+    padding: 8px 9px 8px 13px;
+  }
+
+  .home-composer__field {
+    height: 44px;
   }
 
   .home-composer > button {
@@ -1371,8 +1536,8 @@ body:has(.app-shell--windowed) {
     grid-template-columns: minmax(0, 1fr) 42px;
   }
 
-  .home-composer > svg {
-    display: none;
+  .home-composer__field {
+    height: 40px;
   }
 
   .home-composer > button {

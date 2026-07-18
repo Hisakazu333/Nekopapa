@@ -46,6 +46,10 @@
     "externalBin": ["binaries/openneko-live2d-stage"],
     "resources": {
       "../../../assets/live2d": "assets/live2d"
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "hardenedRuntime": false
     }
   }
 }

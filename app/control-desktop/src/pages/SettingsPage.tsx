@@ -23,6 +23,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { PageHeading, SettingRow, Toggle } from "../components/ui";
+import type { AuthSessionSnapshot } from "../auth/authService";
 
 type SettingsSection = "general" | "companion" | "agent" | "account" | "privacy" | "about";
 
@@ -37,15 +38,22 @@ const settingsSections = [
 
 interface SettingsPageProps {
   stageRunning: boolean;
+  onOpenAccount: () => void;
+  authSession: AuthSessionSnapshot;
 }
 
-export function SettingsPage({ stageRunning }: SettingsPageProps) {
+export function SettingsPage({ stageRunning, onOpenAccount, authSession }: SettingsPageProps) {
   const [section, setSection] = useState<SettingsSection>("general");
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
   const [tray, setTray] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [clickThrough, setClickThrough] = useState(false);
   const [localOnly, setLocalOnly] = useState(true);
+  const accountConnection = !authSession.profile
+    ? { label: "未登录", description: "登录后验证账号并使用账号服务。", className: "" }
+    : authSession.verification === "offline"
+      ? { label: "账号离线", description: "已读取本机账号，当前无法验证服务端连接。", className: "state-badge--warning" }
+      : { label: "已验证", description: "账号凭据已通过服务端验证。", className: "state-badge--success" };
 
   return (
     <div className="page settings-page">
@@ -110,14 +118,30 @@ export function SettingsPage({ stageRunning }: SettingsPageProps) {
 
           {section === "account" ? (
             <>
-              <SettingsSectionHeader title="账号与同步" description="管理登录状态和跨设备数据。" icon={<Cloud size={19} />} />
+              <SettingsSectionHeader title="账号与同步" description="管理登录状态与云端连接。" icon={<Cloud size={19} />} />
               <div className="account-panel">
                 <span className="account-panel__avatar"><UserRound size={23} /></span>
-                <div><strong>尚未登录</strong><p>登录后可同步账号和已授权的同伴信息。</p></div>
-                <button type="button" className="button button--primary">登录</button>
+                <div>
+                  <strong>{authSession.profile?.displayName || "尚未登录"}</strong>
+                  <p>{authSession.profile?.phone || "登录后可使用账号服务和已授权的同伴信息。"}</p>
+                </div>
+                <button type="button" className="button button--primary" onClick={onOpenAccount}>
+                  {authSession.status === "signed-in" ? "账号中心" : "登录"}
+                </button>
               </div>
-              <SettingsGroup title="同步">
-                <SettingRow icon={<Cloud size={17} />} title="云同步" description="登录后可用" control={<Toggle checked={false} onChange={() => undefined} label="云同步" disabled />} />
+              <SettingsGroup title="连接">
+                <SettingRow
+                  icon={<Cloud size={17} />}
+                  title="账号连接"
+                  description={accountConnection.description}
+                  control={<span className={`state-badge ${accountConnection.className}`}>{accountConnection.label}</span>}
+                />
+                <SettingRow
+                  icon={<Database size={17} />}
+                  title="云同步"
+                  description="跨设备同步尚未接入当前桌面端。"
+                  control={<span className="state-badge">未配置</span>}
+                />
               </SettingsGroup>
             </>
           ) : null}
@@ -147,7 +171,7 @@ export function SettingsPage({ stageRunning }: SettingsPageProps) {
               <SettingsGroup title="组件">
                 <SettingRow icon={<Monitor size={17} />} title="桌面主控台" control={<span className="setting-value">Tauri 2</span>} />
                 <SettingRow icon={<Cat size={17} />} title="桌宠 Stage" control={<span className="setting-value">Native Cubism</span>} />
-                <SettingRow icon={<ShieldCheck size={17} />} title="开源许可" control={<span className="setting-value">MIT</span>} />
+                <SettingRow icon={<ShieldCheck size={17} />} title="仓库许可" control={<span className="setting-value">Apache-2.0</span>} />
               </SettingsGroup>
             </>
           ) : null}

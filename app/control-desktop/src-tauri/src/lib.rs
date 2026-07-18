@@ -1,3 +1,4 @@
+mod auth_keychain;
 mod stage;
 mod window_state;
 
@@ -13,6 +14,10 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(stage)
         .invoke_handler(tauri::generate_handler![
+            auth_keychain::save_auth_session,
+            auth_keychain::load_auth_session,
+            auth_keychain::clear_auth_session,
+            auth_keychain::get_auth_device_id,
             stage::stage_status,
             stage::start_stage,
             stage::stop_stage,

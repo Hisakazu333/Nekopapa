@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { CloudOff, Database, ShieldCheck } from "lucide-react";
+import { CircleAlert, CloudOff, Database, ShieldCheck, X } from "lucide-react";
+import { authAdapter, type AuthSessionSnapshot } from "./auth/authService";
 import { TopNavigation } from "./components/TopNavigation";
 import type { Live2DRenderState } from "./components/Live2DCompanion";
 import {
@@ -9,6 +10,7 @@ import {
   type StageStatus,
 } from "./bridge/stage";
 import { AgentPage } from "./pages/AgentPage";
+import { AuthDialog } from "./pages/AuthDialog";
 import { ConversationPage } from "./pages/ConversationPage";
 import { MemoryPage } from "./pages/MemoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -39,8 +41,23 @@ const errorStatus = (error: unknown): StageStatus => ({
   updatedAt: new Date().toISOString(),
 });
 
+interface AuthNotice {
+  tone: "warning" | "error";
+  message: string;
+}
+
+const authErrorMessage = (cause: unknown) => cause instanceof Error
+  ? cause.message
+  : "账号操作未完成，请稍后重试。";
+
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>("stage");
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [authSession, setAuthSession] = useState<AuthSessionSnapshot>({
+    status: "signed-out",
+    profile: null,
+  });
+  const [authNotice, setAuthNotice] = useState<AuthNotice | null>(null);
   const [stageStatus, setStageStatus] = useState<StageStatus>(initialStageStatus);
   const [stageBusy, setStageBusy] = useState(false);
   const [live2dState, setLive2dState] = useState<Live2DRenderState>("idle");
@@ -60,6 +77,46 @@ export default function App() {
   useEffect(() => {
     void refreshStageStatus();
   }, [refreshStageStatus]);
+
+  useEffect(() => {
+    let active = true;
+    void authAdapter.getSession()
+      .then((session) => {
+        if (active) setAuthSession(session);
+      })
+      .catch((cause) => {
+        if (!active) return;
+        setAuthSession({ status: "signed-out", profile: null });
+        setAuthNotice({ tone: "error", message: authErrorMessage(cause) });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const openAccount = useCallback(() => {
+    setAuthDialogOpen(true);
+  }, []);
+
+  const closeAccount = useCallback(() => {
+    setAuthDialogOpen(false);
+  }, []);
+
+  const completeAuthentication = useCallback((session: AuthSessionSnapshot, warning?: string) => {
+    setAuthSession(session);
+    setAuthDialogOpen(false);
+    setAuthNotice(warning ? { tone: "warning", message: warning } : null);
+  }, []);
+
+  const signOutAccount = useCallback(async () => {
+    try {
+      const result = await authAdapter.signOut();
+      completeAuthentication({ status: "signed-out", profile: null }, result.warning);
+    } catch (cause) {
+      setAuthNotice({ tone: "error", message: authErrorMessage(cause) });
+    }
+  }, [completeAuthentication]);
 
   const runStageAction = useCallback(async (action: "start" | "stop") => {
     setStageBusy(true);
@@ -98,6 +155,9 @@ export default function App() {
         onNavigate={setActivePage}
         stageRunning={stageRunning}
         live2dState={live2dState}
+        authSession={authSession}
+        onOpenAccount={openAccount}
+        onSignOut={() => void signOutAccount()}
       />
 
       <main className="app-main">
@@ -123,7 +183,13 @@ export default function App() {
         {activePage === "memory" ? <MemoryPage /> : null}
         {activePage === "world" ? <WorldPage /> : null}
         {activePage === "agent" ? <AgentPage /> : null}
-        {activePage === "settings" ? <SettingsPage stageRunning={stageRunning} /> : null}
+        {activePage === "settings" ? (
+          <SettingsPage
+            stageRunning={stageRunning}
+            onOpenAccount={openAccount}
+            authSession={authSession}
+          />
+        ) : null}
       </main>
 
       {activePage !== "stage" ? (
@@ -134,6 +200,24 @@ export default function App() {
           <span><ShieldCheck size={13} aria-hidden="true" /> 本地优先</span>
           <span className="statusbar__version">v0.1.0</span>
         </footer>
+      ) : null}
+
+      {authDialogOpen ? (
+        <AuthDialog
+          session={authSession}
+          onClose={closeAccount}
+          onAuthenticated={completeAuthentication}
+        />
+      ) : null}
+
+      {authNotice ? (
+        <div className={`auth-app-notice auth-app-notice--${authNotice.tone}`} role="alert">
+          <CircleAlert size={17} aria-hidden="true" />
+          <span>{authNotice.message}</span>
+          <button type="button" onClick={() => setAuthNotice(null)} aria-label="关闭账号提示" title="关闭">
+            <X size={15} aria-hidden="true" />
+          </button>
+        </div>
       ) : null}
     </div>
   );
